@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  # 1. Файловое хранилище
+  minio:
+    image: minio/minio
+    container_name: debt_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # 2. Backend (Spring Boot)
+  backend:
+    build: .
+    container_name: debt_backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      minio:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Магия для Linux, чтобы видеть localhost хоста
+    environment:
+      # Дублируем переменные, если хотим переопределить properties, но файл properties уже настроен
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/studs?currentSchema=s409178
+
+  # 3. Frontend (React + Nginx)
+  frontend:
+    build: ./frontend
+    container_name: debt_frontend
+    ports:
+      - "3000:80" # Открываем React на порту 3000
+    depends_on:
+      - backend
