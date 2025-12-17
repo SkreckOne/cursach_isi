@@ -16,8 +16,11 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<User> getAllUsers(String search) {
+        if (search == null || search.isBlank()) {
+            return userRepository.findAll();
+        }
+        return userRepository.findByEmailContainingIgnoreCase(search.trim());
     }
 
     @Transactional

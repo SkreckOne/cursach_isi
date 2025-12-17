@@ -27,8 +27,8 @@ public class AdminController {
     // --- ПОЛЬЗОВАТЕЛИ ---
 
     @GetMapping("/users")
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public List<User> getAllUsers(@RequestParam(required = false) String search) {
+        return userService.getAllUsers(search);
     }
 
     @PutMapping("/users/{id}/verify")

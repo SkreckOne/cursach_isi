@@ -6,6 +6,8 @@ const OrdersPage = () => {
     // --- STATE ---
     const [orders, setOrders] = useState([]);
 
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Форма создания (Customer)
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
@@ -29,7 +31,6 @@ const OrdersPage = () => {
     useEffect(() => {
         fetchOrders();
     }, []);
-
     // --- API CALLS ---
 
     const handleLogout = () => {
@@ -37,18 +38,30 @@ const OrdersPage = () => {
         navigate('/login');
     };
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (query = '') => {
         try {
-            const response = await api.get('/orders');
+            const response = await api.get('/orders', {
+                params: { search: query }
+            });
             // Сортировка: новые сверху
-            const sorted = response.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            setOrders(sorted);
+            setOrders(response.data)
         } catch (error) {
             console.error("Error fetching orders", error);
             if (error.response && (error.response.status === 403 || error.response.status === 500)) {
                 handleLogout();
             }
         }
+    };
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        fetchOrders(searchQuery);
+    };
+
+    // Сброс поиска
+    const handleClearSearch = () => {
+        setSearchQuery('');
+        fetchOrders('');
     };
 
     // 1. Создание заказа (Customer)
@@ -156,6 +169,21 @@ const OrdersPage = () => {
                     <button onClick={handleLogout} style={{backgroundColor: '#dc3545'}}>Logout</button>
                 </div>
             </header>
+
+            <div style={{margin: '20px 0', padding: '15px', background: 'white', borderRadius: 8, display: 'flex', gap: 10}}>
+                <input
+                    type="text"
+                    placeholder="Search orders by description or price..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{flex: 1, padding: 8}}
+                />
+                <button onClick={handleSearch} style={{background: '#007bff'}}>Search</button>
+                {searchQuery && (
+                    <button onClick={handleClearSearch} style={{background: '#6c757d'}}>Clear</button>
+                )}
+            </div>
+
 
             {/* FORM: Create Order (Customer) */}
             {role === 'customer' && (

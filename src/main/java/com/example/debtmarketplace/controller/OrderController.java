@@ -20,9 +20,9 @@ public class OrderController {
     private final OrderService orderService;
 
     @GetMapping
-    public List<Order> getOrders(Authentication authentication) {
-        // ИСПРАВЛЕНО: вызываем метод с фильтрацией по пользователю
-        return orderService.getOrdersForUser(authentication.getName());
+    public List<Order> getOrders(Authentication authentication,
+                                 @RequestParam(required = false) String search) {
+        return orderService.getOrdersForUser(authentication.getName(), search);
     }
 
     @PostMapping(consumes = {"multipart/form-data"})

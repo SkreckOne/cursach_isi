@@ -8,9 +8,11 @@ const AdminDashboard = () => {
     const [orders, setOrders] = useState([]);
     const [transactions, setTransactions] = useState([]);
     const navigate = useNavigate();
+    const [search, setSearch] = useState('');
 
     // Загрузка данных при переключении вкладок
     useEffect(() => {
+        setSearch('');
         if (activeTab === 'users') fetchUsers();
         else if (activeTab === 'finance') fetchTransactions();
         else fetchOrders();
@@ -18,20 +20,25 @@ const AdminDashboard = () => {
 
     // --- API ЗАПРОСЫ ---
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (query = '') => {
         try {
-            const res = await api.get('/admin/users');
-            // Сортировка: сначала непроверенные (pending)
+            const res = await api.get('/admin/users', { params: { search: query } });
             setUsers(res.data.sort((a, b) => (a.verificationStatus === 'pending' ? -1 : 1)));
         } catch (e) { console.error(e); }
     };
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (query = '') => {
         try {
-            const res = await api.get('/orders');
-            // Сортировка: сначала те, что ждут модерации
+            // Используем тот же эндпоинт заказов, он теперь поддерживает поиск
+            const res = await api.get('/orders', { params: { search: query } });
             setOrders(res.data.sort((a, b) => (a.status === 'PENDING_MODERATION' ? -1 : 1)));
         } catch (e) { console.error(e); }
+    };
+
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        if (activeTab === 'users') fetchUsers(search);
+        else if (activeTab === 'orders') fetchOrders(search);
     };
 
     const fetchTransactions = async () => {
@@ -98,6 +105,19 @@ const AdminDashboard = () => {
                 <button onClick={() => setActiveTab('users')} style={getTabStyle(activeTab === 'users')}>Users</button>
                 <button onClick={() => setActiveTab('finance')} style={getTabStyle(activeTab === 'finance')}>Transactions</button>
             </div>
+
+            {activeTab !== 'finance' && (
+                <div style={{margin: '0 0 20px 0', display: 'flex', gap: 10}}>
+                    <input
+                        placeholder={activeTab === 'users' ? "Search users by email..." : "Search orders..."}
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        style={{padding: 8, width: '300px'}}
+                    />
+                    <button onClick={handleSearchSubmit} style={{background: '#007bff'}}>Search</button>
+                    {search && <button onClick={() => { setSearch(''); activeTab === 'users' ? fetchUsers('') : fetchOrders(''); }} style={{background: '#6c757d'}}>Clear</button>}
+                </div>
+            )}
 
             {/* 1. Вкладка ЗАКАЗЫ */}
             {activeTab === 'orders' && (

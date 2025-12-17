@@ -32,28 +32,37 @@ public class OrderService {
     private final OrderApplicationRepository orderApplicationRepository;
 
     // 1. Получение заказов
-    public List<Order> getOrdersForUser(String email) {
+    public List<Order> getOrdersForUser(String email, String search) {
         User user = getUserByEmail(email);
         UserRoleEnum role = user.getRole().getName();
 
         List<Order> orders = new ArrayList<>();
 
+        // 1. Собираем заказы по ролям (как и было)
         if (role == UserRoleEnum.admin) {
             orders = orderRepository.findAll();
         } else if (role == UserRoleEnum.customer) {
             orders = orderRepository.findAllByCustomerId(user.getId());
         } else if (role == UserRoleEnum.collector) {
-            // Коллектор видит: Открытые на бирже + Свои
             List<Order> marketplace = orderRepository.findAllByStatus("OPEN");
             List<Order> myWork = orderRepository.findAllByCollectorId(user.getId());
             orders.addAll(marketplace);
             orders.addAll(myWork);
         }
 
-        // Сортировка: Сначала новые
-        return orders.stream()
-                .sorted(Comparator.comparing(Order::getId)) // Или по дате, если есть поле
-                .collect(Collectors.toList());
+        // 2. Сортировка (новые сверху)
+        orders.sort(Comparator.comparing(Order::getCreatedAt).reversed());
+
+        // 3. НОВОЕ: Фильтрация по поисковому запросу (Java Stream)
+        if (search != null && !search.isBlank()) {
+            String query = search.toLowerCase().trim();
+            return orders.stream()
+                    .filter(o -> o.getDescription().toLowerCase().contains(query)
+                            || o.getPrice().toString().contains(query))
+                    .collect(Collectors.toList());
+        }
+
+        return orders;
     }
 
     // --- НОВЫЙ МЕТОД: Откликнуться (Коллектор) ---
