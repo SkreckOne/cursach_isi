@@ -10,6 +10,7 @@ public class CollectorProfileDto {
     private String description;
     private BigDecimal hourlyRate;
     private String region;
-    // Список ID выбранных методов
+
+    // Поле для передачи выбранных методов (и на чтение, и на запись)
     private List<UUID> workMethodIds;
 }

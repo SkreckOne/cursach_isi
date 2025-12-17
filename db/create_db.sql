@@ -76,6 +76,15 @@ CREATE TABLE orders (
                         completed_at TIMESTAMPTZ
 );
 
+CREATE TABLE order_applications (
+                                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                                    collector_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                                    UNIQUE(order_id, collector_id) -- Один коллектор - одна заявка на заказ
+);
+
+
 -- 7. Отзывы
 CREATE TABLE reviews (
                          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -2,7 +2,9 @@ package com.example.debtmarketplace.service;
 
 import com.example.debtmarketplace.domain.order.entity.Attachment;
 import com.example.debtmarketplace.domain.order.entity.Order;
+import com.example.debtmarketplace.domain.order.entity.OrderApplication;
 import com.example.debtmarketplace.domain.order.repository.AttachmentRepository;
+import com.example.debtmarketplace.domain.order.repository.OrderApplicationRepository;
 import com.example.debtmarketplace.domain.order.repository.OrderRepository;
 import com.example.debtmarketplace.domain.user.entity.User;
 import com.example.debtmarketplace.domain.user.enums.UserRoleEnum;
@@ -27,6 +29,7 @@ public class OrderService {
     private final AttachmentRepository attachmentRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
+    private final OrderApplicationRepository orderApplicationRepository;
 
     // 1. Получение заказов
     public List<Order> getOrdersForUser(String email) {
@@ -51,6 +54,48 @@ public class OrderService {
         return orders.stream()
                 .sorted(Comparator.comparing(Order::getId)) // Или по дате, если есть поле
                 .collect(Collectors.toList());
+    }
+
+    // --- НОВЫЙ МЕТОД: Откликнуться (Коллектор) ---
+    @Transactional
+    public void applyForOrder(UUID orderId, String email) {
+        User collector = getUserByEmail(email);
+        Order order = getOrder(orderId);
+
+        if (!"OPEN".equals(order.getStatus())) throw new RuntimeException("Order not available");
+        if (orderApplicationRepository.existsByOrderIdAndCollectorId(orderId, collector.getId())) {
+            throw new RuntimeException("Already applied");
+        }
+
+        OrderApplication application = new OrderApplication();
+        application.setOrder(order);
+        application.setCollector(collector);
+        orderApplicationRepository.save(application);
+    }
+
+    // --- НОВЫЙ МЕТОД: Выбрать исполнителя (Заказчик) ---
+    @Transactional
+    public void approveCollector(UUID orderId, UUID collectorId, String customerEmail) {
+        User customer = getUserByEmail(customerEmail);
+        Order order = getOrder(orderId);
+
+        if (!order.getCustomerId().equals(customer.getId())) {
+            throw new RuntimeException("Not your order");
+        }
+        if (!"OPEN".equals(order.getStatus())) {
+            throw new RuntimeException("Order is not open");
+        }
+
+        order.setCollectorId(collectorId);
+        order.setStatus("IN_PROGRESS");
+        orderRepository.save(order);
+
+        // Опционально: можно удалить остальные заявки
+    }
+
+    // --- НОВЫЙ МЕТОД: Получить список откликов (для Заказчика) ---
+    public List<OrderApplication> getApplicationsForOrder(UUID orderId) {
+        return orderApplicationRepository.findAllByOrderId(orderId);
     }
 
     // 2. Создание

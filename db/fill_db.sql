@@ -1,6 +1,16 @@
 -- Очистка таблиц перед заполнением (чтобы не было дублей)
 TRUNCATE TABLE messages, attachments, disputes, transactions, reviews, orders, collector_work_methods, customer_profiles, collector_profiles, users, roles RESTART IDENTITY CASCADE;
 
+
+
+INSERT INTO work_methods (id, name) VALUES
+                                        (gen_random_uuid(), 'Phone Calls'),
+                                        (gen_random_uuid(), 'Field Visits'),
+                                        (gen_random_uuid(), 'Legal Action'),
+                                        (gen_random_uuid(), 'Skip Tracing'),
+                                        (gen_random_uuid(), 'Negotiation'),
+                                        (gen_random_uuid(), 'Asset Search')
+ON CONFLICT (name) DO NOTHING;
 -- ==========================================
 -- 1. РОЛИ
 -- ==========================================

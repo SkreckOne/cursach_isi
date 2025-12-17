@@ -46,10 +46,10 @@ public class OrderController {
         return ResponseEntity.ok("Order moderated");
     }
 
-    @PostMapping("/{id}/take")
-    public ResponseEntity<?> takeOrder(@PathVariable UUID id, Authentication authentication) {
-        orderService.takeOrder(id, authentication.getName());
-        return ResponseEntity.ok("Order taken");
+    @PostMapping("/{id}/apply")
+    public ResponseEntity<?> applyForOrder(@PathVariable UUID id, Authentication authentication) {
+        orderService.applyForOrder(id, authentication.getName());
+        return ResponseEntity.ok("Applied successfully");
     }
 
     @PostMapping(value = "/{id}/submit-proof", consumes = {"multipart/form-data"})
@@ -68,5 +68,21 @@ public class OrderController {
         // Передаем email (authentication.getName()), чтобы определить, кто подтверждает
         orderService.approveCompletion(id, authentication.getName());
         return ResponseEntity.ok("Order completed successfully");
+    }
+
+    @PostMapping("/{id}/approve-collector/{collectorId}")
+    public ResponseEntity<?> approveCollector(
+            @PathVariable UUID id,
+            @PathVariable UUID collectorId,
+            Authentication authentication
+    ) {
+        orderService.approveCollector(id, collectorId, authentication.getName());
+        return ResponseEntity.ok("Collector approved");
+    }
+
+    // Получить отклики
+    @GetMapping("/{id}/applications")
+    public ResponseEntity<?> getApplications(@PathVariable UUID id) {
+        return ResponseEntity.ok(orderService.getApplicationsForOrder(id));
     }
 }
