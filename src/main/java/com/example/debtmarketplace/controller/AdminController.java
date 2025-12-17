@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.example.debtmarketplace.domain.finance.entity.Transaction;
+import com.example.debtmarketplace.domain.finance.repository.TransactionRepository;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +22,7 @@ public class AdminController {
 
     private final UserService userService;
     private final OrderService orderService;
+    private final TransactionRepository transactionRepository;
 
     // --- ПОЛЬЗОВАТЕЛИ ---
 
@@ -47,5 +50,10 @@ public class AdminController {
     public ResponseEntity<?> deleteOrder(@PathVariable UUID id) {
         orderService.deleteOrder(id);
         return ResponseEntity.ok("Order deleted");
+    }
+
+    @GetMapping("/transactions")
+    public List<Transaction> getAllTransactions() {
+        return transactionRepository.findAll();
     }
 }
