@@ -73,3 +73,24 @@ BEGIN
    COMMIT;
 END;
 $$ LANGUAGE plpgsql;
+
+
+-- Функция для обновления среднего рейтинга коллектора
+CREATE OR REPLACE FUNCTION update_collector_average_rating()
+    RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE collector_profiles
+    SET average_rating = (
+        SELECT AVG(rating)
+        FROM reviews
+        WHERE collector_id = NEW.collector_id
+    )
+    WHERE user_id = NEW.collector_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_after_review_insert
+    AFTER INSERT ON reviews
+    FOR EACH ROW
+EXECUTE FUNCTION update_collector_average_rating();

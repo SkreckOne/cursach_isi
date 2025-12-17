@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import com.example.debtmarketplace.domain.workmethod.entity.WorkMethod;
+import java.util.Set;
+import java.util.HashSet;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -55,5 +58,11 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 
-    // --- УБРАЛИ updatedAt (нет в БД) ---
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "collector_work_methods",
+            joinColumns = @JoinColumn(name = "collector_id"),
+            inverseJoinColumns = @JoinColumn(name = "method_id")
+    )
+    private Set<WorkMethod> workMethods = new HashSet<>();
 }

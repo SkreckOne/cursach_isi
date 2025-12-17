@@ -19,12 +19,10 @@ const RegisterPage = () => {
         e.preventDefault();
         try {
             await api.post('/auth/signup', formData);
-            alert("Registration successful! Please login.");
             navigate('/login');
         } catch (err) {
             const errorMsg = err.response?.data || err.message;
             console.error("Registration error:", errorMsg);
-            alert("Registration failed: " + JSON.stringify(errorMsg));
         }
     };
 

@@ -20,13 +20,23 @@ public class Order {
     @Column(name = "collector_id")
     private UUID collectorId;
 
-    // Пока оставим String, позже переделаем на Enum OrderStatus
     @Column(name = "status")
     private String status;
 
     private String description;
 
     private BigDecimal price;
+
+    // --- ДОБАВЛЕННЫЕ ПОЛЯ (которых не хватало) ---
+
+    @Column(name = "moderation_comment")
+    private String moderationComment;
+
+    @Column(name = "proof_description")
+    private String proofDescription;
+
+    @Column(name = "proof_file_path")
+    private String proofFilePath;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;

@@ -13,16 +13,23 @@ const LoginPage = () => {
         try {
             const response = await api.post('/auth/signin', { email, password });
 
-            // Сохраняем данные, полученные от бэкенда
-            localStorage.setItem('token', response.data.token);
+            const token = response.data.token;
+
+            if (!token) {
+                throw new Error("Server did not return a token!");
+            }
+
+            // Сохраняем данные
+            localStorage.setItem('token', token);
             localStorage.setItem('userId', response.data.id);
             localStorage.setItem('role', response.data.role);
             localStorage.setItem('email', response.data.email);
 
-            navigate('/orders'); // Перенаправляем на заказы
+            navigate('/orders');
         } catch (err) {
+            console.error("Login error:", err);
             setError('Invalid email or password');
-            console.error(err);
+            localStorage.clear(); // Чистим, если ошибка
         }
     };
 

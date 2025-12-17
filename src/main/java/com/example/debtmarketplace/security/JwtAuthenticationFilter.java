@@ -9,6 +9,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -19,8 +20,8 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final CustomUserDetailsService userDetailsService;
+    private final JwtUtils jwtUtils;
+    private final UserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(
@@ -33,7 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt;
         final String userEmail;
 
-        // 1. Проверяем наличие заголовка Authorization и его формат
+        // 1. Проверяем наличие заголовка
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -42,37 +43,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 2. Извлекаем токен
         jwt = authHeader.substring(7);
         try {
-            userEmail = jwtTokenProvider.extractUsername(jwt);
+            userEmail = jwtUtils.getUserNameFromJwtToken(jwt);
         } catch (Exception e) {
-            // Если токен невалиден или истек, просто продолжаем цепочку фильтров,
-            // Spring Security сам вернет 403, если доступ к ресурсу требует аутентификации
+            System.err.println("JWT Parsing error: " + e.getMessage());
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 3. Если email есть и пользователь еще не аутентифицирован в контексте
+        // 3. Если email есть и контекст пуст - авторизуем
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-            // Загружаем пользователя из БД
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
-            // Проверяем валидность токена
-            if (jwtTokenProvider.isTokenValid(jwt, userDetails)) {
-
+            if (jwtUtils.validateJwtToken(jwt)) {
                 // Создаем объект аутентификации
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
                         userDetails.getAuthorities()
                 );
-
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // Устанавливаем пользователя в контекст Spring Security
+                // ВАЖНО: Устанавливаем контекст
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                // ЛОГ ДЛЯ ОТЛАДКИ (УДАЛИТЬ ПОТОМ)
+                System.out.println("User authenticated: " + userEmail + ", Roles: " + userDetails.getAuthorities());
             }
         }
-
         filterChain.doFilter(request, response);
     }
 }

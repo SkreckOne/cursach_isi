@@ -3,9 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OrdersPage from './pages/OrdersPage';
+import ProfilePage from './pages/ProfilePage'; // <--- Импорт
 import './App.css';
 
-// Компонент для защиты роутов (если нет токена - редирект на логин)
 const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem('token');
     return token ? children : <Navigate to="/login" />;
@@ -27,7 +27,15 @@ function App() {
                     }
                 />
 
-                {/* По умолчанию редирект на заказы (или логин, если не авторизован) */}
+                <Route
+                    path="/profile"
+                    element={
+                        <PrivateRoute>
+                            <ProfilePage />
+                        </PrivateRoute>
+                    }
+                />
+
                 <Route path="*" element={<Navigate to="/orders" />} />
             </Routes>
         </Router>
