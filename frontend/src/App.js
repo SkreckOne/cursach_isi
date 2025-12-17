@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OrdersPage from './pages/OrdersPage';
 import ProfilePage from './pages/ProfilePage'; // <--- Импорт
+import AdminDashboard from './pages/AdminDashboard';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -35,6 +36,8 @@ function App() {
                         </PrivateRoute>
                     }
                 />
+
+                <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
 
                 <Route path="*" element={<Navigate to="/orders" />} />
             </Routes>

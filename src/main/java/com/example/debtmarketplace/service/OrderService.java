@@ -93,6 +93,14 @@ public class OrderService {
         // Опционально: можно удалить остальные заявки
     }
 
+    @Transactional
+    public void deleteOrder(UUID orderId) {
+        if (!orderRepository.existsById(orderId)) {
+            throw new RuntimeException("Order not found");
+        }
+        orderRepository.deleteById(orderId);
+    }
+
     // --- НОВЫЙ МЕТОД: Получить список откликов (для Заказчика) ---
     public List<OrderApplication> getApplicationsForOrder(UUID orderId) {
         return orderApplicationRepository.findAllByOrderId(orderId);
