@@ -3,7 +3,6 @@ import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-    // --- STATE ---
     const [activeTab, setActiveTab] = useState('orders'); // orders, users, finance, disputes
     const [users, setUsers] = useState([]);
     const [orders, setOrders] = useState([]);
@@ -11,7 +10,6 @@ const AdminDashboard = () => {
     const [disputes, setDisputes] = useState([]); // <--- НОВОЕ СОСТОЯНИЕ
     const navigate = useNavigate();
 
-    // --- EFFECTS ---
     useEffect(() => {
         if (activeTab === 'users') fetchUsers();
         else if (activeTab === 'finance') fetchTransactions();

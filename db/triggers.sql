@@ -69,13 +69,10 @@ BEGIN
    INSERT INTO transactions (order_id, user_id, type, amount)
    VALUES (p_order_id, v_order.collector_id, 'withdrawal', v_amount_to_collector);
 
-
-   COMMIT;
 END;
 $$ LANGUAGE plpgsql;
 
 
--- Функция для обновления среднего рейтинга коллектора
 CREATE OR REPLACE FUNCTION update_collector_average_rating()
     RETURNS TRIGGER AS $$
 BEGIN

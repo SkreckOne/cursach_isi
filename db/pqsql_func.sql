@@ -1,4 +1,3 @@
--- Функция создания заказа (Сразу с коллектором)
 CREATE OR REPLACE FUNCTION create_new_order(
     p_customer_id UUID,
     p_collector_id UUID,
@@ -9,12 +8,10 @@ CREATE OR REPLACE FUNCTION create_new_order(
 DECLARE
     new_order_id UUID;
 BEGIN
-    -- Проверка, что заказчик и коллектор разные люди
     IF p_customer_id = p_collector_id THEN
         RAISE EXCEPTION 'Customer and collector cannot be the same user.';
     END IF;
 
-    -- Проверки существования и верификации
     IF NOT EXISTS (SELECT 1 FROM users WHERE id = p_customer_id AND verification_status = 'verified') THEN
         RAISE EXCEPTION 'Customer is not found or not verified.';
     END IF;
@@ -22,8 +19,7 @@ BEGIN
         RAISE EXCEPTION 'Collector is not found or not verified.';
     END IF;
 
-    -- Вставка заказа.
-    -- Так как коллектор уже назначен, ставим статус 'IN_PROGRESS'
+
     INSERT INTO orders (customer_id, collector_id, description, price, status)
     VALUES (p_customer_id, p_collector_id, p_description, p_price, 'IN_PROGRESS')
     RETURNING id INTO new_order_id;
@@ -33,7 +29,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- Процедура оплаты (Вызывается Java-кодом при завершении)
 CREATE OR REPLACE PROCEDURE complete_order_and_process_payment(
     p_order_id UUID,
     p_customer_id UUID
@@ -45,15 +40,12 @@ DECLARE
     v_commission NUMERIC;
     v_amount_to_collector NUMERIC;
 BEGIN
-    -- Блокируем строку для обновления
     SELECT * INTO v_order FROM orders WHERE id = p_order_id FOR UPDATE;
 
-    -- Валидация
     IF v_order IS NULL THEN
         RAISE EXCEPTION 'Order not found.';
     END IF;
 
-    -- ВОЗВРАЩАЕМ ВАЖНУЮ ПРОВЕРКУ:
     IF v_order.customer_id != p_customer_id THEN
         RAISE EXCEPTION 'Access denied. You are not the customer for this order.';
     END IF;
@@ -62,17 +54,14 @@ BEGIN
         RAISE EXCEPTION 'Order status is not completed.';
     END IF;
 
-    -- Расчеты
     v_commission := v_order.price * v_commission_rate;
     v_amount_to_collector := v_order.price - v_commission;
 
-    -- Запись транзакций
     INSERT INTO transactions (order_id, user_id, type, amount)
     VALUES (p_order_id, p_customer_id, 'payment', v_order.price);
 
     INSERT INTO transactions (order_id, user_id, type, amount)
     VALUES (p_order_id, v_order.collector_id, 'withdrawal', v_amount_to_collector);
 
-    -- COMMIT УБРАН (управляется Spring @Transactional)
 END;
 $$ LANGUAGE plpgsql;
