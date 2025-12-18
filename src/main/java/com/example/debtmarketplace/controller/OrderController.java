@@ -1,8 +1,11 @@
 package com.example.debtmarketplace.controller;
 
+import com.example.debtmarketplace.domain.contract.ContractService;
 import com.example.debtmarketplace.domain.order.entity.Order;
 import com.example.debtmarketplace.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +22,7 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderService orderService;
+    private final ContractService contractService;
 
     @GetMapping
     public List<Order> getOrders(Authentication authentication,
@@ -103,5 +107,15 @@ public class OrderController {
     @GetMapping("/my-applications")
     public List<UUID> getMyAppliedOrderIds(Authentication authentication) {
         return orderService.getMyAppliedOrderIds(authentication.getName());
+    }
+
+    @GetMapping("/{id}/contract")
+    public ResponseEntity<byte[]> downloadContract(@PathVariable UUID id) {
+        byte[] pdfBytes = contractService.generateContractPdf(id);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contract_" + id + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 }

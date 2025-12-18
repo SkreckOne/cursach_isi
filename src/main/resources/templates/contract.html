@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Service Contract</title>
+    <style>
+        body { font-family: sans-serif; font-size: 12pt; line-height: 1.5; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .section { margin-bottom: 20px; }
+        .bold { font-weight: bold; }
+        .sign-block { margin-top: 50px; display: flex; justify-content: space-between; }
+        .sign { width: 45%; border-top: 1px solid black; padding-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2>SERVICE AGREEMENT</h2>
+    <p>Contract #: <span th:text="${orderId}">0000</span></p>
+    <p>Date: <span th:text="${date}">2025-01-01</span></p>
+</div>
+
+<div class="section">
+    <p>This Agreement is entered into by and between:</p>
+
+    <p><span class="bold">Customer:</span> <span th:text="${customerInfo}">Customer Name</span><br/>
+        (hereinafter referred to as the "Client")</p>
+
+    <p>AND</p>
+
+    <p><span class="bold">Collector:</span> <span th:text="${collectorInfo}">Collector Name</span><br/>
+        (hereinafter referred to as the "Service Provider")</p>
+</div>
+
+<div class="section">
+    <h3>1. SCOPE OF WORK</h3>
+    <p>The Service Provider agrees to perform debt collection services regarding the following debt:</p>
+    <p class="bold" th:text="${description}">Debt Description</p>
+</div>
+
+<div class="section">
+    <h3>2. PAYMENT TERMS</h3>
+    <p>The Client agrees to pay the Service Provider the amount of:</p>
+    <p><span class="bold" th:text="${price}">0.00</span> RUB</p>
+</div>
+
+<div class="section">
+    <h3>3. SIGNATURES</h3>
+    <table style="width: 100%; margin-top: 50px;">
+        <tr>
+            <td style="width: 50%; vertical-align: top;">
+                __________________________<br/>
+                Signed by Client<br/>
+                <span th:text="${customerInfo}">Name</span>
+            </td>
+            <td style="width: 50%; vertical-align: top;">
+                __________________________<br/>
+                Signed by Provider<br/>
+                <span th:text="${collectorInfo}">Name</span>
+            </td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>

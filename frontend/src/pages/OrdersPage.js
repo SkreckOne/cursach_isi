@@ -121,6 +121,25 @@ const OrdersPage = () => {
         }
     };
 
+    const handleDownloadContract = async (id) => {
+        try {
+            const response = await api.get(`/orders/${id}/contract`, {
+                responseType: 'blob', // ВАЖНО: говорим Axios, что ждем бинарный файл
+            });
+
+            // Создаем невидимую ссылку и кликаем по ней для скачивания
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `contract_${id}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (e) {
+            alert("Error downloading contract: " + (e.response?.data || "Not generated yet"));
+        }
+    };
+
 
     const handleWithdraw = async (id) => {
         if (!window.confirm("Withdraw your application?")) return;
@@ -392,7 +411,7 @@ const OrdersPage = () => {
                                         )}
                                     </div>
 
-                                    {/* ПРАВАЯ ЧАСТЬ (Статус и Кнопки) - ВСТАВЛЯЕМ СЮДА */}
+                                    {/* ПРАВАЯ ЧАСТЬ (Статус и Кнопки) */}
                                     <div style={{textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px'}}>
                 <span
                     className="status"
@@ -407,9 +426,9 @@ const OrdersPage = () => {
                     {order.status}
                 </span>
 
-                                        {/* --- КНОПКИ ДЕЙСТВИЙ --- */}
+                                        {/* --- КНОПКИ ДЕЙСТВИЙ (ADMIN, COLLECTOR, CUSTOMER) --- */}
 
-                                        {/* 1. АДМИН: Модерация (Оставляем) */}
+                                        {/* 1. АДМИН: Модерация */}
                                         {role === 'admin' && order.status === 'PENDING_MODERATION' && (
                                             <div style={{display: 'flex', gap: '5px'}}>
                                                 <button onClick={() => handleModerate(order.id, true)} style={{backgroundColor: '#28a745', padding: '5px 10px', width: 'auto', fontSize: '12px'}}>Approve</button>
@@ -417,10 +436,9 @@ const OrdersPage = () => {
                                             </div>
                                         )}
 
-                                        {/* 2. КОЛЛЕКТОР: Apply / Withdraw (ВСТАВЛЯЕМ ВАШ КОД СЮДА) */}
+                                        {/* 2. КОЛЛЕКТОР: Apply / Withdraw */}
                                         {role === 'collector' && order.status === 'OPEN' && (
                                             <>
-                                                {/* Если ID есть в списке appliedOrderIds -> показываем Withdraw */}
                                                 {appliedOrderIds.includes(order.id) ? (
                                                     <button
                                                         onClick={() => handleWithdraw(order.id)}
@@ -429,7 +447,6 @@ const OrdersPage = () => {
                                                         Withdraw Application
                                                     </button>
                                                 ) : (
-                                                    /* Иначе показываем Apply */
                                                     <button
                                                         onClick={() => handleApply(order.id)}
                                                         style={{background: '#007bff', width: 'auto'}}
@@ -440,24 +457,34 @@ const OrdersPage = () => {
                                             </>
                                         )}
 
-                                        {/* 3. КОЛЛЕКТОР: Сдать работу (Оставляем) */}
+                                        {/* 3. КОЛЛЕКТОР: Сдать работу */}
                                         {role === 'collector' && order.status === 'IN_PROGRESS' && (
                                             <button onClick={() => openProofForm(order.id)} style={{backgroundColor: '#17a2b8', width: 'auto'}}>Submit Proof</button>
                                         )}
 
-                                        {/* 4. ЗАКАЗЧИК: Посмотреть отклики (Оставляем) */}
+                                        {/* 4. ЗАКАЗЧИК: Посмотреть отклики */}
                                         {role === 'customer' && order.status === 'OPEN' && (
                                             <button onClick={() => loadApplicants(order.id)} style={{backgroundColor: '#ffc107', color: 'black', width: 'auto'}}>View Applicants</button>
                                         )}
 
-                                        {/* 5. ЗАКАЗЧИК: Принять и оплатить (Оставляем) */}
+                                        {/* 5. ЗАКАЗЧИК: Принять и оплатить */}
                                         {role === 'customer' && order.status === 'PENDING_REVIEW' && (
                                             <button onClick={() => handleApproveCompletion(order.id)} style={{backgroundColor: '#6610f2', width: 'auto'}}>Approve & Pay</button>
                                         )}
 
-                                        {/* 6. ЗАКАЗЧИК: Отзыв (Оставляем) */}
+                                        {/* 6. ЗАКАЗЧИК: Отзыв */}
                                         {role === 'customer' && order.status?.toUpperCase() === 'COMPLETED' && !order.hasReview && (
                                             <button onClick={() => setReviewOrderId(order.id)} style={{backgroundColor: '#ffc107', color: 'black', width: 'auto'}}>⭐ Rate</button>
+                                        )}
+
+                                        {/* --- 7. КНОПКА СКАЧИВАНИЯ КОНТРАКТА (ВСТАВЛЕНО СЮДА) --- */}
+                                        {['IN_PROGRESS', 'PENDING_REVIEW', 'COMPLETED'].includes(order.status) && (
+                                            <button
+                                                onClick={() => handleDownloadContract(order.id)}
+                                                style={{backgroundColor: '#6c757d', color: 'white', width: 'auto', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'}}
+                                            >
+                                                📄 Contract PDF
+                                            </button>
                                         )}
                                     </div>
                                 </div>
