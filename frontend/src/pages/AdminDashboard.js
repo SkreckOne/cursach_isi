@@ -3,89 +3,85 @@ import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-    const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'users', 'finance'
+    // --- STATE ---
+    const [activeTab, setActiveTab] = useState('orders'); // orders, users, finance, disputes
     const [users, setUsers] = useState([]);
     const [orders, setOrders] = useState([]);
     const [transactions, setTransactions] = useState([]);
+    const [disputes, setDisputes] = useState([]); // <--- НОВОЕ СОСТОЯНИЕ
     const navigate = useNavigate();
-    const [search, setSearch] = useState('');
 
-    // Загрузка данных при переключении вкладок
+    // --- EFFECTS ---
     useEffect(() => {
-        setSearch('');
         if (activeTab === 'users') fetchUsers();
         else if (activeTab === 'finance') fetchTransactions();
+        else if (activeTab === 'disputes') fetchDisputes(); // <--- НОВЫЙ ВЫЗОВ
         else fetchOrders();
     }, [activeTab]);
 
-    // --- API ЗАПРОСЫ ---
-
-    const fetchUsers = async (query = '') => {
+    // --- API CALLS ---
+    const fetchUsers = async () => {
         try {
-            const res = await api.get('/admin/users', { params: { search: query } });
+            const res = await api.get('/admin/users');
             setUsers(res.data.sort((a, b) => (a.verificationStatus === 'pending' ? -1 : 1)));
         } catch (e) { console.error(e); }
     };
 
-    const fetchOrders = async (query = '') => {
+    const fetchOrders = async () => {
         try {
-            // Используем тот же эндпоинт заказов, он теперь поддерживает поиск
-            const res = await api.get('/orders', { params: { search: query } });
+            const res = await api.get('/orders');
             setOrders(res.data.sort((a, b) => (a.status === 'PENDING_MODERATION' ? -1 : 1)));
         } catch (e) { console.error(e); }
-    };
-
-    const handleSearchSubmit = (e) => {
-        e.preventDefault();
-        if (activeTab === 'users') fetchUsers(search);
-        else if (activeTab === 'orders') fetchOrders(search);
     };
 
     const fetchTransactions = async () => {
         try {
             const res = await api.get('/admin/transactions');
-            // Сортировка: новые сверху
             setTransactions(res.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         } catch (e) { console.error(e); }
     };
 
-    // --- ДЕЙСТВИЯ (HANDLERS) ---
-
-    const handleVerifyUser = async (id) => {
+    // <--- НОВАЯ ФУНКЦИЯ ЗАГРУЗКИ СПОРОВ --->
+    const fetchDisputes = async () => {
         try {
-            await api.put(`/admin/users/${id}/verify`);
-            alert("User verified!");
-            fetchUsers();
-        } catch (e) { alert("Error verifying user"); }
+            const res = await api.get('/disputes'); // <--- ИСПРАВЛЕНО
+            setDisputes(res.data.filter(d => d.status === 'open'));
+        } catch (e) { console.error("Error fetching disputes", e); }
     };
 
-    const handleBlockUser = async (id, currentStatus) => {
-        const action = currentStatus ? "unblock" : "block";
-        if (!window.confirm(`Are you sure you want to ${action} this user?`)) return;
-        try {
-            await api.put(`/admin/users/${id}/block`, null, { params: { blocked: !currentStatus } });
-            fetchUsers();
-        } catch (e) { alert("Error blocking user"); }
+    // --- HANDLERS ---
+    const handleVerifyUser = async (id) => { /* ... */
+        try { await api.put(`/admin/users/${id}/verify`); fetchUsers(); } catch (e) { alert("Error"); }
     };
 
-    const handleModerateOrder = async (id, approved) => {
+    const handleBlockUser = async (id, currentStatus) => { /* ... */
+        if(!window.confirm("Change block status?")) return;
+        try { await api.put(`/admin/users/${id}/block`, null, { params: { blocked: !currentStatus } }); fetchUsers(); } catch (e) { alert("Error"); }
+    };
+
+    const handleModerateOrder = async (id, approved) => { /* ... */
         let reason = null;
-        if (!approved) {
-            reason = prompt("Rejection reason:");
-            if (!reason) return;
-        }
-        try {
-            await api.post(`/orders/${id}/moderate`, null, { params: { approved, reason } });
-            fetchOrders();
-        } catch (e) { alert(e.response?.data || "Error moderating"); }
+        if (!approved) { reason = prompt("Rejection reason:"); if (!reason) return; }
+        try { await api.post(`/orders/${id}/moderate`, null, { params: { approved, reason } }); fetchOrders(); } catch (e) { alert("Error"); }
     };
 
-    const handleDeleteOrder = async (id) => {
-        if (!window.confirm("DELETE order permanently?")) return;
+    const handleDeleteOrder = async (id) => { /* ... */
+        if (!window.confirm("Delete order?")) return;
+        try { await api.delete(`/admin/orders/${id}`); fetchOrders(); } catch (e) { alert("Error"); }
+    };
+
+    // <--- НОВАЯ ФУНКЦИЯ РЕШЕНИЯ СПОРА --->
+    const handleResolveDispute = async (id, collectorWins) => {
+        const comment = prompt("Add resolution comment (e.g. 'Proof accepted'):");
         try {
-            await api.delete(`/admin/orders/${id}`);
-            fetchOrders();
-        } catch (e) { alert("Error deleting"); }
+            await api.post(`/disputes/${id}/resolve`, null, {
+                params: { collectorWins, comment: comment || '' }
+            });
+            alert("Dispute resolved!");
+            fetchDisputes();
+        } catch (e) {
+            alert("Error resolving dispute: " + (e.response?.data || e.message));
+        }
     };
 
     // --- RENDER ---
@@ -99,89 +95,52 @@ const AdminDashboard = () => {
                 </div>
             </header>
 
-            {/* Вкладки */}
+            {/* ВКЛАДКИ */}
             <div style={{marginBottom: 20, borderBottom: '1px solid #ddd'}}>
-                <button onClick={() => setActiveTab('orders')} style={getTabStyle(activeTab === 'orders')}>Orders Moderation</button>
+                <button onClick={() => setActiveTab('orders')} style={getTabStyle(activeTab === 'orders')}>Orders</button>
                 <button onClick={() => setActiveTab('users')} style={getTabStyle(activeTab === 'users')}>Users</button>
                 <button onClick={() => setActiveTab('finance')} style={getTabStyle(activeTab === 'finance')}>Transactions</button>
+                <button onClick={() => setActiveTab('disputes')} style={getTabStyle(activeTab === 'disputes')}>Disputes</button> {/* <--- НОВАЯ КНОПКА */}
             </div>
 
-            {activeTab !== 'finance' && (
-                <div style={{margin: '0 0 20px 0', display: 'flex', gap: 10}}>
-                    <input
-                        placeholder={activeTab === 'users' ? "Search users by email..." : "Search orders..."}
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        style={{padding: 8, width: '300px'}}
-                    />
-                    <button onClick={handleSearchSubmit} style={{background: '#007bff'}}>Search</button>
-                    {search && <button onClick={() => { setSearch(''); activeTab === 'users' ? fetchUsers('') : fetchOrders(''); }} style={{background: '#6c757d'}}>Clear</button>}
-                </div>
-            )}
-
-            {/* 1. Вкладка ЗАКАЗЫ */}
+            {/* TAB: ORDERS */}
             {activeTab === 'orders' && (
                 <div className="list-section">
-                    {orders.length === 0 && <p>No orders found.</p>}
+                    {orders.length === 0 && <p>No orders to moderate.</p>}
                     {orders.map(order => (
-                        <div key={order.id} className="order-item" style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderLeft: order.status === 'PENDING_MODERATION' ? '5px solid orange' : '5px solid #ccc', padding: '10px', marginBottom: '10px', background: 'white', borderRadius: '4px'}}>
-                            <div className="order-info">
-                                <strong>{order.description}</strong> ({order.price} RUB)
-                                <br/>
-                                <small>Status: <span style={{fontWeight: 'bold'}}>{order.status}</span></small> <br/>
-                                <small style={{color: '#888'}}>ID: {order.id}</small>
+                        <div key={order.id} className="order-item" style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderLeft: order.status === 'PENDING_MODERATION' ? '5px solid orange' : '5px solid #ccc', padding: 10, marginBottom: 10, background: 'white'}}>
+                            <div>
+                                <strong>{order.description}</strong> ({order.price} RUB) <br/>
+                                <small>{order.status}</small>
                             </div>
                             <div style={{display:'flex', gap: 5}}>
-                                {/* Кнопки модерации только для статуса PENDING_MODERATION */}
                                 {order.status === 'PENDING_MODERATION' && (
                                     <>
-                                        <button onClick={() => handleModerateOrder(order.id, true)} style={{background: 'green', color: 'white'}}>Approve</button>
-                                        <button onClick={() => handleModerateOrder(order.id, false)} style={{background: 'orange', color: 'black'}}>Reject</button>
+                                        <button onClick={() => handleModerateOrder(order.id, true)} style={{background: 'green'}}>Approve</button>
+                                        <button onClick={() => handleModerateOrder(order.id, false)} style={{background: 'orange'}}>Reject</button>
                                     </>
                                 )}
-                                <button onClick={() => handleDeleteOrder(order.id)} style={{background: '#dc3545', color: 'white'}}>Delete</button>
+                                <button onClick={() => handleDeleteOrder(order.id)} style={{background: '#dc3545'}}>Delete</button>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* 2. Вкладка ЮЗЕРЫ */}
+            {/* TAB: USERS */}
             {activeTab === 'users' && (
                 <div className="list-section">
-                    <table style={{width: '100%', borderCollapse: 'collapse', background: 'white'}}>
-                        <thead>
-                        <tr style={{textAlign: 'left', backgroundColor: '#f8f9fa', borderBottom: '2px solid #ddd'}}>
-                            <th style={{padding: 10}}>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                        </thead>
+                    <table style={{width: '100%'}}>
+                        <thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
                         <tbody>
                         {users.map(u => (
-                            <tr key={u.id} style={{borderBottom: '1px solid #eee'}}>
-                                <td style={{padding: 10}}>{u.email} {u.blocked && <span style={{color:'red', fontWeight: 'bold'}}>(BANNED)</span>}</td>
+                            <tr key={u.id}>
+                                <td>{u.email}</td>
                                 <td>{u.role.name}</td>
+                                <td>{u.verificationStatus} {u.blocked && <b>(BANNED)</b>}</td>
                                 <td>
-                                        <span style={{
-                                            padding: '2px 6px', borderRadius: 4, fontSize: 12,
-                                            backgroundColor: u.verificationStatus === 'verified' ? '#28a745' : '#ffc107',
-                                            color: u.verificationStatus === 'verified' ? 'white' : 'black'
-                                        }}>
-                                            {u.verificationStatus}
-                                        </span>
-                                </td>
-                                <td>
-                                    {u.verificationStatus !== 'verified' && (
-                                        <button onClick={() => handleVerifyUser(u.id)} style={{marginRight: 5, padding: '4px 8px', fontSize: 12, background: 'green', color: 'white'}}>Verify</button>
-                                    )}
-                                    <button
-                                        onClick={() => handleBlockUser(u.id, u.blocked)}
-                                        style={{padding: '4px 8px', fontSize: 12, background: u.blocked ? 'gray' : 'red', color: 'white'}}
-                                    >
-                                        {u.blocked ? 'Unban' : 'Ban'}
-                                    </button>
+                                    <button onClick={() => handleVerifyUser(u.id)} style={{marginRight:5}}>Verify</button>
+                                    <button onClick={() => handleBlockUser(u.id, u.blocked)} style={{background: u.blocked?'gray':'red'}}>{u.blocked?'Unban':'Ban'}</button>
                                 </td>
                             </tr>
                         ))}
@@ -190,57 +149,54 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* 3. Вкладка ФИНАНСЫ */}
+            {/* TAB: FINANCE */}
             {activeTab === 'finance' && (
                 <div className="list-section">
-                    <table style={{width: '100%', borderCollapse: 'collapse', background: 'white'}}>
-                        <thead>
-                        <tr style={{textAlign: 'left', backgroundColor: '#f8f9fa', borderBottom: '2px solid #ddd'}}>
-                            <th style={{padding: 10}}>Date</th>
-                            <th>Type</th>
-                            <th>User (Email)</th>
-                            <th>Order ID</th>
-                            <th>Amount</th>
-                        </tr>
-                        </thead>
+                    <table style={{width: '100%'}}>
+                        <thead><tr><th>Date</th><th>Type</th><th>User</th><th>Amount</th></tr></thead>
                         <tbody>
                         {transactions.map(tx => (
-                            <tr key={tx.id} style={{borderBottom: '1px solid #eee'}}>
-                                <td style={{padding: 10}}>{new Date(tx.createdAt).toLocaleString()}</td>
-                                <td>
-                                        <span style={{
-                                            padding: '2px 6px', borderRadius: 4, fontSize: 12,
-                                            backgroundColor: tx.type === 'payment' ? '#ffc107' : '#28a745',
-                                            color: 'black'
-                                        }}>
-                                            {tx.type}
-                                        </span>
-                                </td>
-                                <td>{tx.user?.email || 'N/A'}</td>
-                                <td style={{fontSize: 12, fontFamily: 'monospace'}}>{tx.order?.id?.substring(0, 8) || 'N/A'}...</td>
-                                <td style={{fontWeight: 'bold'}}>
-                                    {tx.type === 'withdrawal' ? '+' : '-'}{tx.amount} RUB
-                                </td>
+                            <tr key={tx.id}>
+                                <td>{new Date(tx.createdAt).toLocaleString()}</td>
+                                <td>{tx.type}</td>
+                                <td>{tx.user?.email}</td>
+                                <td>{tx.amount}</td>
                             </tr>
                         ))}
                         </tbody>
                     </table>
                 </div>
             )}
+
+            {/* TAB: DISPUTES (ВОТ СЮДА ВСТАВЛЕН ВАШ КОД) */}
+            {activeTab === 'disputes' && (
+                <div className="list-section">
+                    {disputes.length === 0 && <p>No open disputes.</p>}
+                    {disputes.map(d => (
+                        <div key={d.id} className="order-item" style={{background: '#fff0f0', borderLeft: '5px solid red', padding: 10, marginBottom: 10}}>
+                            <h4>Dispute on Order #{d.order.id.substring(0,8)}...</h4>
+                            <p><strong>Customer Complaint:</strong> {d.description}</p>
+                            <div style={{background: '#fff', padding: 5, fontSize: '0.9em', marginBottom: 10, border: '1px solid #eee'}}>
+                                <strong>Collector Proof:</strong> {d.order.proofDescription} <br/>
+                                <small>File: {d.order.proofFilePath}</small>
+                            </div>
+                            <div style={{display:'flex', gap: 10}}>
+                                <button onClick={() => handleResolveDispute(d.id, true)} style={{background: 'green', width: 'auto'}}>Collector is Right (Pay)</button>
+                                <button onClick={() => handleResolveDispute(d.id, false)} style={{background: 'red', width: 'auto'}}>Customer is Right (Refund)</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
         </div>
     );
 };
 
-// Стили для кнопок вкладок
 const getTabStyle = (isActive) => ({
-    marginRight: 10,
-    padding: '10px 20px',
-    border: 'none',
+    marginRight: 10, padding: '10px 20px', border: 'none', cursor: 'pointer',
     borderBottom: isActive ? '3px solid #007bff' : '3px solid transparent',
-    backgroundColor: isActive ? '#e7f1ff' : 'transparent',
-    color: isActive ? '#007bff' : '#555',
-    cursor: 'pointer',
-    fontWeight: 'bold'
+    backgroundColor: isActive ? '#e7f1ff' : 'transparent', color: isActive ? '#007bff' : '#555', fontWeight: 'bold'
 });
 
 export default AdminDashboard;

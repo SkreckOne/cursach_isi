@@ -111,7 +111,7 @@ CREATE TABLE disputes (
                           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                           order_id UUID NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
                           initiator_id UUID REFERENCES users(id) ON DELETE SET NULL,
-                          status dispute_status NOT NULL DEFAULT 'open',
+                          status VARCHAR(50) NOT NULL DEFAULT 'open',
                           description TEXT NOT NULL,
                           resolution TEXT,
                           created_at TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -34,10 +34,17 @@ const OrdersPage = () => {
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState('');
 
+
+    const [disputeOrderId, setDisputeOrderId] = useState(null);
+    const [disputeReason, setDisputeReason] = useState('');
+
+    const [userInfo, setUserInfo] = useState({ balance: 0, role: '', email: '' });
+
     // --- EFFECTS ---
     useEffect(() => {
         fetchOrders();
         // Если я коллектор - загружаю свои заявки
+        fetchUserInfo(); // !!! ДОБАВИТЬ ЭТОТ ВЫЗОВ !!!
         if (role === 'collector') {
             fetchAppliedIds();
         }
@@ -47,6 +54,15 @@ const OrdersPage = () => {
     const handleLogout = () => {
         localStorage.clear();
         navigate('/login');
+    };
+
+    const fetchUserInfo = async () => {
+        try {
+            const res = await api.get('/users/me');
+            setUserInfo(res.data);
+        } catch (e) {
+            console.error("Error fetching user info", e);
+        }
     };
     const fetchAppliedIds = async () => {
         try {
@@ -148,6 +164,18 @@ const OrdersPage = () => {
             alert("Application withdrawn.");
             fetchAppliedIds(); // Обновляем список, чтобы кнопка сменилась на Apply
         } catch (e) { alert("Error withdrawing"); }
+    };
+
+    const handleOpenDispute = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/disputes', null, {
+                params: { orderId: disputeOrderId, reason: disputeReason }
+            });
+            alert("Dispute opened! Admin will review it.");
+            setDisputeOrderId(null);
+            fetchOrders();
+        } catch (e) { alert("Error opening dispute"); }
     };
 
     const handleSubmitReview = async (e) => {
@@ -260,16 +288,24 @@ const OrdersPage = () => {
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
                 <h1 style={{margin: 0}}>Debt Exchange</h1>
-                <div className="user-info">
-                    <span style={{marginRight: 15}}><strong>{email}</strong> ({role})</span>
+                <div className="user-info" style={{textAlign: 'right'}}>
+                    <div>
+                        <span style={{marginRight: 15}}><strong>{email}</strong> ({role})</span>
+                        {/* Отображение баланса (если userInfo загружен) */}
+                        {userInfo && userInfo.balance !== undefined && (
+                            <span style={{color: '#28a745', fontWeight: 'bold', marginRight: 15}}>
+                                {userInfo.balance} RUB
+                            </span>
+                        )}
+                    </div>
 
-                    {/* Кнопка Админки (только для admin) */}
-                    {role === 'admin' && (
-                        <button onClick={() => navigate('/admin')} style={{marginRight: 10, background: '#6610f2', width: 'auto'}}>Admin Panel</button>
-                    )}
-
-                    <button onClick={() => navigate('/profile')} style={{marginRight: 10, width: 'auto'}}>Profile</button>
-                    <button onClick={handleLogout} style={{backgroundColor: '#dc3545', width: 'auto'}}>Logout</button>
+                    <div style={{marginTop: 5}}>
+                        {role === 'admin' && (
+                            <button onClick={() => navigate('/admin')} style={{marginRight: 10, background: '#6610f2', width: 'auto'}}>Admin Panel</button>
+                        )}
+                        <button onClick={() => navigate('/profile')} style={{marginRight: 10, width: 'auto'}}>Profile</button>
+                        <button onClick={handleLogout} style={{backgroundColor: '#dc3545', width: 'auto'}}>Logout</button>
+                    </div>
                 </div>
             </header>
 
@@ -316,9 +352,9 @@ const OrdersPage = () => {
                 </div>
             )}
 
-            {/* --- 4. MODALS / ACTIVE FORMS --- */}
+            {/* --- 4. MODALS (ACTIVE FORMS) --- */}
 
-            {/* A. Просмотр откликов (Для Заказчика) */}
+            {/* A. Просмотр откликов (Заказчик) */}
             {selectedOrderId && (
                 <div className="form-section" style={{border: '2px solid orange', backgroundColor: '#fff3cd'}}>
                     <h3>Applicants for Order</h3>
@@ -328,28 +364,14 @@ const OrdersPage = () => {
                                 <li key={app.id} style={{padding: 15, borderBottom: '1px solid #ccc', background: 'white', marginBottom: 10, borderRadius: 8}}>
                                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                                         <div>
-                                            <div style={{fontSize: '1.1em', fontWeight: 'bold'}}>{app.email}</div>
-
-                                            {/* --- ИНФОРМАЦИЯ О КОЛЛЕКТОРЕ --- */}
-                                            <div style={{marginTop: 5, color: '#555', fontSize: '0.9em'}}>
-                                                <div>⭐ <strong>Rating:</strong> {app.rating || '0.0'} / 5.0</div>
-                                                <div>💰 <strong>Rate:</strong> {app.hourlyRate ? `${app.hourlyRate} RUB/hour` : 'Not specified'}</div>
-                                                <div>📍 <strong>Region:</strong> {app.region || 'Unknown'}</div>
-                                            </div>
-
-                                            <div style={{marginTop: 5, fontSize: '0.8em', color: '#999'}}>
-                                                Applied: {new Date(app.appliedAt).toLocaleString()}
+                                            <div style={{fontWeight: 'bold'}}>{app.email}</div>
+                                            <div style={{fontSize: '0.9em', color: '#555'}}>
+                                                <div>⭐ Rating: {app.rating || '0.0'}</div>
+                                                <div>💰 Rate: {app.hourlyRate} RUB/h</div>
+                                                <div>📍 Region: {app.region}</div>
                                             </div>
                                         </div>
-
-                                        <div>
-                                            <button
-                                                onClick={() => handleHireCollector(selectedOrderId, app.collectorId)}
-                                                style={{background: '#28a745', padding: '8px 16px', fontSize: '14px', width: 'auto'}}
-                                            >
-                                                Hire This Pro
-                                            </button>
-                                        </div>
+                                        <button onClick={() => handleHireCollector(selectedOrderId, app.collectorId)} style={{background: '#28a745', width: 'auto'}}>Hire</button>
                                     </div>
                                 </li>
                             ))}
@@ -359,7 +381,7 @@ const OrdersPage = () => {
                 </div>
             )}
 
-            {/* B. Сдача работы (Для Коллектора) */}
+            {/* B. Сдача работы (Коллектор) */}
             {activeOrderId && (
                 <div className="form-section" style={{border: '2px solid #007bff', backgroundColor: '#f0f8ff'}}>
                     <h3>Submit Work Report</h3>
@@ -368,9 +390,7 @@ const OrdersPage = () => {
                             placeholder="Describe work done..."
                             value={proofText}
                             onChange={e => setProofText(e.target.value)}
-                            rows={3}
-                            style={{width: '100%', marginBottom: 10, padding: 5}}
-                            required
+                            rows={3} style={{width: '100%', marginBottom: 10}} required
                         />
                         <div style={{marginBottom: 10}}>
                             <label>Proof Document: </label>
@@ -379,6 +399,26 @@ const OrdersPage = () => {
                         <div style={{display: 'flex', gap: 10}}>
                             <button type="submit" style={{backgroundColor: '#28a745', width: 'auto'}}>Send</button>
                             <button type="button" onClick={() => setActiveOrderId(null)} style={{backgroundColor: '#6c757d', width: 'auto'}}>Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* C. Открытие Спора (Заказчик) */}
+            {disputeOrderId && (
+                <div className="form-section" style={{border: '2px solid #dc3545', backgroundColor: '#fff5f5'}}>
+                    <h3 style={{color: '#dc3545'}}>Open Dispute</h3>
+                    <p>Please describe the issue. Admin will review the case.</p>
+                    <form onSubmit={handleOpenDispute}>
+                        <textarea
+                            placeholder="Reason for dispute..."
+                            value={disputeReason}
+                            onChange={e => setDisputeReason(e.target.value)}
+                            rows={4} style={{width: '100%', marginBottom: 10}} required
+                        />
+                        <div style={{display: 'flex', gap: 10}}>
+                            <button type="submit" style={{backgroundColor: '#dc3545', width: 'auto'}}>Open Dispute</button>
+                            <button type="button" onClick={() => setDisputeOrderId(null)} style={{backgroundColor: '#6c757d', width: 'auto'}}>Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -393,42 +433,37 @@ const OrdersPage = () => {
                         {orders.map((order) => (
                             <li key={order.id} className="order-item">
                                 <div className="order-info">
-                                    {/* ЛЕВАЯ ЧАСТЬ (Описание, цена, статус отказа) - ОСТАВЛЯЕМ КАК ЕСТЬ */}
+                                    {/* ЛЕВАЯ ЧАСТЬ */}
                                     <div style={{maxWidth: '60%'}}>
                                         <div style={{fontSize: '1.1em', fontWeight: 'bold'}}>{order.description}</div>
                                         <div style={{color: '#555', marginTop: '5px'}}>Price: {order.price} RUB</div>
                                         <div style={{fontSize: '0.8em', color: '#999', marginTop: '5px'}}>ID: {order.id}</div>
 
                                         {order.status === 'REJECTED' && (
-                                            <div style={{color: '#dc3545', marginTop: '5px', fontSize: '0.9em'}}>
+                                            <div style={{color: '#dc3545', marginTop: 5, fontSize: '0.9em'}}>
                                                 <strong>Reason:</strong> {order.moderationComment}
                                             </div>
                                         )}
-                                        {order.status === 'PENDING_REVIEW' && (role === 'customer' || role === 'admin') && (
+                                        {/* Показываем отчет (Заказчику, Админу или если спор) */}
+                                        {(order.status === 'PENDING_REVIEW' || order.status === 'IN_DISPUTE' || order.status === 'COMPLETED') && (role === 'customer' || role === 'admin') && (
                                             <div style={{backgroundColor: '#e9ecef', padding: '10px', marginTop: '10px', borderRadius: '4px', fontSize: '0.9em'}}>
                                                 <strong>Report:</strong> {order.proofDescription}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* ПРАВАЯ ЧАСТЬ (Статус и Кнопки) */}
+                                    {/* ПРАВАЯ ЧАСТЬ */}
                                     <div style={{textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px'}}>
-                <span
-                    className="status"
-                    style={{
-                        backgroundColor: getStatusColor(order.status),
-                        color: 'white',
-                        padding: '5px 10px',
-                        borderRadius: '15px',
-                        fontSize: '12px'
-                    }}
-                >
-                    {order.status}
-                </span>
+                                        <span
+                                            className="status"
+                                            style={{backgroundColor: getStatusColor(order.status), color: 'white', padding: '5px 10px', borderRadius: '15px', fontSize: '12px'}}
+                                        >
+                                            {order.status}
+                                        </span>
 
-                                        {/* --- КНОПКИ ДЕЙСТВИЙ (ADMIN, COLLECTOR, CUSTOMER) --- */}
+                                        {/* --- КНОПКИ ДЕЙСТВИЙ --- */}
 
-                                        {/* 1. АДМИН: Модерация */}
+                                        {/* 1. ADMIN: Moderate */}
                                         {role === 'admin' && order.status === 'PENDING_MODERATION' && (
                                             <div style={{display: 'flex', gap: '5px'}}>
                                                 <button onClick={() => handleModerate(order.id, true)} style={{backgroundColor: '#28a745', padding: '5px 10px', width: 'auto', fontSize: '12px'}}>Approve</button>
@@ -436,49 +471,42 @@ const OrdersPage = () => {
                                             </div>
                                         )}
 
-                                        {/* 2. КОЛЛЕКТОР: Apply / Withdraw */}
+                                        {/* 2. COLLECTOR: Apply / Withdraw */}
                                         {role === 'collector' && order.status === 'OPEN' && (
                                             <>
                                                 {appliedOrderIds.includes(order.id) ? (
-                                                    <button
-                                                        onClick={() => handleWithdraw(order.id)}
-                                                        style={{background: '#6c757d', border: '1px solid #999', width: 'auto'}}
-                                                    >
-                                                        Withdraw Application
-                                                    </button>
+                                                    <button onClick={() => handleWithdraw(order.id)} style={{background: '#6c757d', border: '1px solid #999', width: 'auto'}}>Withdraw</button>
                                                 ) : (
-                                                    <button
-                                                        onClick={() => handleApply(order.id)}
-                                                        style={{background: '#007bff', width: 'auto'}}
-                                                    >
-                                                        Apply
-                                                    </button>
+                                                    <button onClick={() => handleApply(order.id)} style={{background: '#007bff', width: 'auto'}}>Apply</button>
                                                 )}
                                             </>
                                         )}
 
-                                        {/* 3. КОЛЛЕКТОР: Сдать работу */}
+                                        {/* 3. COLLECTOR: Submit Proof */}
                                         {role === 'collector' && order.status === 'IN_PROGRESS' && (
                                             <button onClick={() => openProofForm(order.id)} style={{backgroundColor: '#17a2b8', width: 'auto'}}>Submit Proof</button>
                                         )}
 
-                                        {/* 4. ЗАКАЗЧИК: Посмотреть отклики */}
+                                        {/* 4. CUSTOMER: View Applicants */}
                                         {role === 'customer' && order.status === 'OPEN' && (
                                             <button onClick={() => loadApplicants(order.id)} style={{backgroundColor: '#ffc107', color: 'black', width: 'auto'}}>View Applicants</button>
                                         )}
 
-                                        {/* 5. ЗАКАЗЧИК: Принять и оплатить */}
+                                        {/* 5. CUSTOMER: Approve OR Dispute */}
                                         {role === 'customer' && order.status === 'PENDING_REVIEW' && (
-                                            <button onClick={() => handleApproveCompletion(order.id)} style={{backgroundColor: '#6610f2', width: 'auto'}}>Approve & Pay</button>
+                                            <div style={{display: 'flex', gap: 5}}>
+                                                <button onClick={() => handleApproveCompletion(order.id)} style={{backgroundColor: '#6610f2', width: 'auto'}}>Approve & Pay</button>
+                                                <button onClick={() => setDisputeOrderId(order.id)} style={{backgroundColor: '#dc3545', width: 'auto'}}>Dispute</button>
+                                            </div>
                                         )}
 
-                                        {/* 6. ЗАКАЗЧИК: Отзыв */}
+                                        {/* 6. CUSTOMER: Rate */}
                                         {role === 'customer' && order.status?.toUpperCase() === 'COMPLETED' && !order.hasReview && (
                                             <button onClick={() => setReviewOrderId(order.id)} style={{backgroundColor: '#ffc107', color: 'black', width: 'auto'}}>⭐ Rate</button>
                                         )}
 
-                                        {/* --- 7. КНОПКА СКАЧИВАНИЯ КОНТРАКТА (ВСТАВЛЕНО СЮДА) --- */}
-                                        {['IN_PROGRESS', 'PENDING_REVIEW', 'COMPLETED'].includes(order.status) && (
+                                        {/* 7. ALL: Contract PDF */}
+                                        {['IN_PROGRESS', 'PENDING_REVIEW', 'COMPLETED', 'IN_DISPUTE'].includes(order.status) && (
                                             <button
                                                 onClick={() => handleDownloadContract(order.id)}
                                                 style={{backgroundColor: '#6c757d', color: 'white', width: 'auto', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px'}}
@@ -498,41 +526,24 @@ const OrdersPage = () => {
             {reviewOrderId && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 1000
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
                 }}>
                     <div style={{background: 'white', padding: 20, borderRadius: 8, width: 400, boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}}>
                         <h3 style={{marginTop: 0}}>Leave a Review</h3>
                         <form onSubmit={handleSubmitReview}>
                             <label style={{display: 'block', marginBottom: 5}}>Rating (1-5):</label>
-                            <select
-                                value={rating}
-                                onChange={e => setRating(e.target.value)}
-                                style={{width: '100%', marginBottom: 15, padding: 8}}
-                            >
+                            <select value={rating} onChange={e => setRating(e.target.value)} style={{width: '100%', marginBottom: 15, padding: 8}}>
                                 <option value="5">5 - Excellent</option>
                                 <option value="4">4 - Good</option>
                                 <option value="3">3 - Normal</option>
                                 <option value="2">2 - Bad</option>
                                 <option value="1">1 - Terrible</option>
                             </select>
-
                             <label style={{display: 'block', marginBottom: 5}}>Comment:</label>
-                            <textarea
-                                value={comment}
-                                onChange={e => setComment(e.target.value)}
-                                rows={4}
-                                style={{width: '100%', marginBottom: 15, padding: 5, boxSizing: 'border-box'}}
-                                required
-                                placeholder="Describe your experience..."
-                            />
-
+                            <textarea value={comment} onChange={e => setComment(e.target.value)} rows={4} style={{width: '100%', marginBottom: 15, padding: 5, boxSizing: 'border-box'}} required />
                             <div style={{display: 'flex', gap: 10, justifyContent: 'flex-end'}}>
                                 <button type="button" onClick={() => setReviewOrderId(null)} style={{background: '#6c757d', width: 'auto'}}>Cancel</button>
-                                <button type="submit" style={{background: '#28a745', width: 'auto'}}>Submit Review</button>
+                                <button type="submit" style={{background: '#28a745', width: 'auto'}}>Submit</button>
                             </div>
                         </form>
                     </div>
