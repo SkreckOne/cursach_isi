@@ -44,15 +44,8 @@ DECLARE
     v_commission NUMERIC;
     v_amount_to_collector NUMERIC;
 BEGIN
-    -- Блокируем строку
     SELECT * INTO v_order FROM orders WHERE id = p_order_id FOR UPDATE;
 
-    IF v_order IS NULL THEN
-        RAISE EXCEPTION 'Order not found.';
-    END IF;
-    IF v_order.customer_id != p_customer_id THEN
-        RAISE EXCEPTION 'Access denied. You are not the customer for this order.';
-    END IF;
     IF v_order.status != 'completed' THEN
         RAISE EXCEPTION 'Order status is not completed.';
     END IF;
@@ -60,13 +53,12 @@ BEGIN
     v_commission := v_order.price * v_commission_rate;
     v_amount_to_collector := v_order.price - v_commission;
 
-    -- Запись транзакций
     INSERT INTO transactions (order_id, user_id, type, amount)
     VALUES (p_order_id, p_customer_id, 'payment', v_order.price);
 
     INSERT INTO transactions (order_id, user_id, type, amount)
     VALUES (p_order_id, v_order.collector_id, 'withdrawal', v_amount_to_collector);
 
-    -- ВАЖНО: ЗДЕСЬ НЕТ КОМАНДЫ COMMIT;
+    -- COMMIT УБРАН!
 END;
 $$ LANGUAGE plpgsql;

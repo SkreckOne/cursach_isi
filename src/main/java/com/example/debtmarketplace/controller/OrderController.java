@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.debtmarketplace.domain.order.dto.ApplicationDto;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -48,8 +49,12 @@ public class OrderController {
 
     @PostMapping("/{id}/apply")
     public ResponseEntity<?> applyForOrder(@PathVariable UUID id, Authentication authentication) {
-        orderService.applyForOrder(id, authentication.getName());
-        return ResponseEntity.ok("Applied successfully");
+        try {
+            orderService.applyForOrder(id, authentication.getName());
+            return ResponseEntity.ok("Applied successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping(value = "/{id}/submit-proof", consumes = {"multipart/form-data"})
@@ -82,7 +87,21 @@ public class OrderController {
 
     // Получить отклики
     @GetMapping("/{id}/applications")
-    public ResponseEntity<?> getApplications(@PathVariable UUID id) {
-        return ResponseEntity.ok(orderService.getApplicationsForOrder(id));
+    public List<ApplicationDto> getApplications(@PathVariable UUID id) {
+        // Сервис теперь возвращает DTO
+        return orderService.getApplicationsForOrder(id);
+    }
+
+    // Отозвать заявку
+    @DeleteMapping("/{id}/application")
+    public ResponseEntity<?> withdrawApplication(@PathVariable UUID id, Authentication authentication) {
+        orderService.withdrawApplication(id, authentication.getName());
+        return ResponseEntity.ok("Application withdrawn");
+    }
+
+    // Получить список ID заказов, где я уже подал заявку (для фронта)
+    @GetMapping("/my-applications")
+    public List<UUID> getMyAppliedOrderIds(Authentication authentication) {
+        return orderService.getMyAppliedOrderIds(authentication.getName());
     }
 }

@@ -13,6 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.debtmarketplace.domain.order.dto.ApplicationDto;
+import com.example.debtmarketplace.domain.order.entity.OrderApplication;
+import com.example.debtmarketplace.domain.profile.entity.CollectorProfile;
+import com.example.debtmarketplace.domain.profile.repository.CollectorProfileRepository;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -30,6 +34,7 @@ public class OrderService {
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
     private final OrderApplicationRepository orderApplicationRepository;
+    private final CollectorProfileRepository collectorProfileRepository;
 
     // 1. Получение заказов
     public List<Order> getOrdersForUser(String email, String search) {
@@ -69,9 +74,22 @@ public class OrderService {
     @Transactional
     public void applyForOrder(UUID orderId, String email) {
         User collector = getUserByEmail(email);
-        Order order = getOrder(orderId);
 
+
+        // 1. ПРОВЕРКА ПРОФИЛЯ
+        CollectorProfile profile = collectorProfileRepository.findById(collector.getId())
+                .orElseThrow(() -> new RuntimeException("Please create your profile first!"));
+
+        // Проверяем важные поля (регион и ставку)
+        if (profile.getRegion() == null || profile.getRegion().isBlank() ||
+                profile.getHourlyRate() == null || java.math.BigDecimal.ZERO.compareTo(profile.getHourlyRate()) >= 0) {
+            throw new RuntimeException("Profile incomplete! Please fill Region and Rate in Profile.");
+        }
+
+        // 2. Стандартные проверки
+        Order order = getOrder(orderId);
         if (!"OPEN".equals(order.getStatus())) throw new RuntimeException("Order not available");
+
         if (orderApplicationRepository.existsByOrderIdAndCollectorId(orderId, collector.getId())) {
             throw new RuntimeException("Already applied");
         }
@@ -102,6 +120,27 @@ public class OrderService {
         // Опционально: можно удалить остальные заявки
     }
 
+    // --- НОВЫЙ МЕТОД: Отозвать заявку ---
+    @Transactional
+    public void withdrawApplication(UUID orderId, String email) {
+        User collector = getUserByEmail(email);
+
+        OrderApplication app = orderApplicationRepository.findByOrderIdAndCollectorId(orderId, collector.getId())
+                .orElseThrow(() -> new RuntimeException("Application not found"));
+
+        // Удаляем заявку
+        orderApplicationRepository.delete(app);
+    }
+
+    // --- НОВЫЙ МЕТОД: Получить список ID заказов, куда я подался ---
+    public List<UUID> getMyAppliedOrderIds(String email) {
+        User collector = getUserByEmail(email);
+        return orderApplicationRepository.findAllByCollectorId(collector.getId())
+                .stream()
+                .map(app -> app.getOrder().getId())
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public void deleteOrder(UUID orderId) {
         if (!orderRepository.existsById(orderId)) {
@@ -111,8 +150,26 @@ public class OrderService {
     }
 
     // --- НОВЫЙ МЕТОД: Получить список откликов (для Заказчика) ---
-    public List<OrderApplication> getApplicationsForOrder(UUID orderId) {
-        return orderApplicationRepository.findAllByOrderId(orderId);
+    public List<ApplicationDto> getApplicationsForOrder(UUID orderId) {
+        List<OrderApplication> apps = orderApplicationRepository.findAllByOrderId(orderId);
+
+        return apps.stream().map(app -> {
+            ApplicationDto dto = new ApplicationDto();
+            dto.setId(app.getId());
+            dto.setCollectorId(app.getCollector().getId());
+            dto.setEmail(app.getCollector().getEmail());
+            dto.setAppliedAt(app.getCreatedAt());
+
+            // Ищем профиль коллектора, чтобы достать рейтинг
+            CollectorProfile profile = collectorProfileRepository.findById(app.getCollector().getId())
+                    .orElse(new CollectorProfile()); // Пустой, если нет
+
+            dto.setRating(profile.getAverageRating() != null ? profile.getAverageRating() : BigDecimal.ZERO);
+            dto.setHourlyRate(profile.getHourlyRate());
+            dto.setRegion(profile.getRegion());
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     // 2. Создание
