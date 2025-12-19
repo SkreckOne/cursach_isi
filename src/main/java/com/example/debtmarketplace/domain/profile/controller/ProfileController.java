@@ -21,7 +21,6 @@ public class ProfileController {
 
     @GetMapping("/me")
     public ResponseEntity<?> getMyProfile(Authentication authentication) {
-        // authentication.getName() возвращает email из токена
         return ResponseEntity.ok(profileService.getMyProfile(authentication.getName()));
     }
 
@@ -49,7 +48,6 @@ public class ProfileController {
 
     @GetMapping("/{userId}")
     public ResponseEntity<?> getProfileById(@PathVariable UUID userId) {
-        // Ищем профиль коллектора. Если нет - профиль заказчика (или 404)
         return ResponseEntity.ok(collectorProfileRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Profile not found")));
     }

@@ -10,9 +10,7 @@ public interface OrderApplicationRepository extends JpaRepository<OrderApplicati
     List<OrderApplication> findAllByOrderId(UUID orderId);
     boolean existsByOrderIdAndCollectorId(UUID orderId, UUID collectorId);
 
-    // НОВЫЙ МЕТОД: Найти заявку конкретного коллектора к конкретному заказу
     Optional<OrderApplication> findByOrderIdAndCollectorId(UUID orderId, UUID collectorId);
 
-    // НОВЫЙ МЕТОД: Найти все заявки конкретного коллектора (чтобы знать ID заказов)
     List<OrderApplication> findAllByCollectorId(UUID collectorId);
 }

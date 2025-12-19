@@ -13,7 +13,6 @@ import java.util.Date;
 @Component
 public class JwtUtils {
 
-    // В реальном проекте хранить в env! Генерируем ключ для HS256
     private static final String JWT_SECRET = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
     private static final int JWT_EXPIRATION_MS = 86400000; // 24 часа
 

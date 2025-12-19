@@ -17,7 +17,6 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    // ... (все старые поля: customerId, collectorId, status, description, price...) ...
     @Column(name = "customer_id")
     private UUID customerId;
 
@@ -42,14 +41,11 @@ public class Order {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    // --- НОВОЕ: СВЯЗЬ С ОТЗЫВОМ ---
 
-    // mappedBy = "order" указывает на поле 'order' в классе Review
     @OneToOne(mappedBy = "order", fetch = FetchType.LAZY)
-    @JsonIgnore // Важно! Не отправляем весь объект отзыва, чтобы не было зацикливания JSON
+    @JsonIgnore
     private Review review;
 
-    // Это поле автоматически попадет в JSON как "hasReview": true/false
     @JsonProperty("hasReview")
     public boolean getHasReview() {
         return review != null;

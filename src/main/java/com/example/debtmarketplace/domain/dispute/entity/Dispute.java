@@ -24,12 +24,12 @@ public class Dispute {
     private User initiator;
 
     @Column(nullable = false)
-    private String status; // 'open', 'resolved'
+    private String status;
 
     @Column(nullable = false)
-    private String description; // Жалоба клиента
+    private String description;
 
-    private String resolution; // Решение админа (комментарий)
+    private String resolution;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;

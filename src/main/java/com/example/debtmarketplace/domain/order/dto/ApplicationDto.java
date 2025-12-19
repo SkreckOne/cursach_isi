@@ -8,11 +8,11 @@ import java.util.UUID;
 
 @Data
 public class ApplicationDto {
-    private UUID id;          // ID заявки
+    private UUID id;
     private UUID collectorId;
     private String email;
-    private BigDecimal rating; // Рейтинг коллектора
-    private BigDecimal hourlyRate; // Ставка
+    private BigDecimal rating;
+    private BigDecimal hourlyRate;
     private String region;
     private OffsetDateTime appliedAt;
 }

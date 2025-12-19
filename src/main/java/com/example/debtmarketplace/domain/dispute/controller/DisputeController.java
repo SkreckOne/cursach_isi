@@ -18,7 +18,6 @@ public class DisputeController {
 
     private final DisputeService disputeService;
 
-    // Открыть спор (Клиент)
     @PostMapping
     public ResponseEntity<?> openDispute(Authentication authentication,
                                          @RequestParam UUID orderId,
@@ -27,14 +26,12 @@ public class DisputeController {
         return ResponseEntity.ok("Dispute opened");
     }
 
-    // Получить все споры (Админ)
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<Dispute> getAllDisputes() {
         return disputeService.getAllDisputes();
     }
 
-    // Решить спор (Админ)
     @PostMapping("/{id}/resolve")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> resolveDispute(

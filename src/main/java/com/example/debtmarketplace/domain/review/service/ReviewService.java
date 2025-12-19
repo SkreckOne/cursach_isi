@@ -27,7 +27,6 @@ public class ReviewService {
         Order order = orderRepository.findById(dto.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        // Валидация
         if (!order.getCustomerId().equals(customer.getId())) {
             throw new RuntimeException("You are not the owner of this order");
         }
@@ -38,12 +37,10 @@ public class ReviewService {
             throw new RuntimeException("Review already exists for this order");
         }
 
-        // Создание отзыва
         Review review = new Review();
         review.setOrder(order);
         review.setCustomer(customer);
-        // Коллектора берем из заказа. Нам нужен User entity, а в Order у нас ID.
-        // Загружаем коллектора по ID
+
         User collector = userRepository.findById(order.getCollectorId())
                 .orElseThrow(() -> new RuntimeException("Collector not found"));
         review.setCollector(collector);
@@ -53,6 +50,5 @@ public class ReviewService {
 
         reviewRepository.save(review);
 
-        // В этот момент в БД сработает ТРИГГЕР и обновит средний рейтинг в collector_profiles
     }
 }

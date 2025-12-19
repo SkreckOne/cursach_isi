@@ -25,7 +25,7 @@ public class Transaction {
     private User user;
 
     @Column(nullable = false)
-    private String type; // 'payment', 'withdrawal'
+    private String type;
 
     @Column(nullable = false)
     private BigDecimal amount;

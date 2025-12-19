@@ -24,14 +24,13 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        // Конвертируем нашего User в Spring Security User
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                !user.isBlocked(), // Enabled: вместо isActive() используем !isBlocked()
-                true,              // Account Non Expired
-                true,              // Credentials Non Expired
-                !user.isBlocked(), // Account Non Locked
+                !user.isBlocked(),
+                true,
+                true,
+                !user.isBlocked(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().name().toUpperCase()))
         );
     }

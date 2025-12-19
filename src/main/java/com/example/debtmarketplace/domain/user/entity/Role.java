@@ -17,7 +17,6 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // Комбинация этих двух аннотаций самая надежная для Postgres + Hibernate 6
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "name", nullable = false, unique = true)

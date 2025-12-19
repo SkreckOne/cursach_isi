@@ -14,7 +14,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     List<Order> findAllByStatus(String status);
     List<Order> findAllByCollectorId(UUID collectorId);
 
-    // Вызов вашей PL/pgSQL процедуры для завершения заказа и транзакции
     @Procedure(procedureName = "complete_order_and_process_payment")
     void completeOrderAndProcessPayment(UUID p_order_id, UUID p_customer_id);
 }

@@ -15,7 +15,6 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Создаем роли (customer, collector, admin)
         createRoleIfNotFound(UserRoleEnum.customer);
         createRoleIfNotFound(UserRoleEnum.collector);
         createRoleIfNotFound(UserRoleEnum.admin);

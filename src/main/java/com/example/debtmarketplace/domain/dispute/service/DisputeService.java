@@ -21,13 +21,11 @@ public class DisputeService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
 
-    // 1. Открыть спор (Клиент)
     @Transactional
     public void openDispute(UUID orderId, String email, String reason) {
         User user = userRepository.findByEmail(email).orElseThrow();
         Order order = orderRepository.findById(orderId).orElseThrow();
 
-        // Проверки
         if (!order.getCustomerId().equals(user.getId())) {
             throw new RuntimeException("Not your order");
         }
@@ -35,7 +33,6 @@ public class DisputeService {
             throw new RuntimeException("Dispute can be opened only when order is Pending Review");
         }
 
-        // Создаем спор
         Dispute dispute = new Dispute();
         dispute.setOrder(order);
         dispute.setInitiator(user);
@@ -43,12 +40,10 @@ public class DisputeService {
         dispute.setStatus("open");
         disputeRepository.save(dispute);
 
-        // Меняем статус заказа
         order.setStatus("IN_DISPUTE");
         orderRepository.save(order);
     }
 
-    // 2. Решить спор (Админ)
     @Transactional
     public void resolveDispute(UUID disputeId, boolean collectorWins, String adminComment) {
         Dispute dispute = disputeRepository.findById(disputeId).orElseThrow();
@@ -59,18 +54,14 @@ public class DisputeService {
         }
 
         if (collectorWins) {
-            // --- ПОБЕДИЛ КОЛЛЕКТОР (Платим деньги) ---
 
-            // 1. Ставим статус completed (требование процедуры)
             order.setStatus("completed");
             orderRepository.saveAndFlush(order);
 
-            // 2. Вызываем процедуру оплаты
             orderRepository.completeOrderAndProcessPayment(order.getId(), order.getCustomerId());
 
             dispute.setResolution("Resolved in favor of Collector. " + adminComment);
         } else {
-            // --- ПОБЕДИЛ КЛИЕНТ (Отменяем заказ) ---
 
             order.setStatus("CANCELLED");
             orderRepository.save(order);

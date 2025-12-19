@@ -27,7 +27,7 @@ public class CollectorProfile {
     private BigDecimal hourlyRate;
 
     @Column(name = "success_rate")
-    private BigDecimal successRate; // Обычно рассчитывается системой, но дадим возможность заполнить для старта
+    private BigDecimal successRate;
 
     private String region;
 

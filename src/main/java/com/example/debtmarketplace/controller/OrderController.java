@@ -37,7 +37,6 @@ public class OrderController {
             @RequestParam("price") BigDecimal price,
             @RequestParam("file") MultipartFile file
     ) {
-        // ИСПРАВЛЕНО: передаем email и вызываем createOrder
         return ResponseEntity.ok(orderService.createOrder(authentication.getName(), description, price, file));
     }
 
@@ -74,7 +73,6 @@ public class OrderController {
 
     @PostMapping("/{id}/approve-completion")
     public ResponseEntity<?> approveCompletion(@PathVariable UUID id, Authentication authentication) {
-        // Передаем email (authentication.getName()), чтобы определить, кто подтверждает
         orderService.approveCompletion(id, authentication.getName());
         return ResponseEntity.ok("Order completed successfully");
     }
@@ -89,21 +87,17 @@ public class OrderController {
         return ResponseEntity.ok("Collector approved");
     }
 
-    // Получить отклики
     @GetMapping("/{id}/applications")
     public List<ApplicationDto> getApplications(@PathVariable UUID id) {
-        // Сервис теперь возвращает DTO
         return orderService.getApplicationsForOrder(id);
     }
 
-    // Отозвать заявку
     @DeleteMapping("/{id}/application")
     public ResponseEntity<?> withdrawApplication(@PathVariable UUID id, Authentication authentication) {
         orderService.withdrawApplication(id, authentication.getName());
         return ResponseEntity.ok("Application withdrawn");
     }
 
-    // Получить список ID заказов, где я уже подал заявку (для фронта)
     @GetMapping("/my-applications")
     public List<UUID> getMyAppliedOrderIds(Authentication authentication) {
         return orderService.getMyAppliedOrderIds(authentication.getName());

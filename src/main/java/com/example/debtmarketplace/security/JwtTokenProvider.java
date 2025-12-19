@@ -18,12 +18,11 @@ import java.util.function.Function;
 @Component
 public class JwtTokenProvider {
 
-    // Секретный ключ (Base64 encoded). В продакшене выносите в application.yml!
-    // Этот ключ 256-битный, подходит для HS256
+
     @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
     private String secretKey;
 
-    @Value("${jwt.expiration:86400000}") // 24 часа по умолчанию
+    @Value("${jwt.expiration:86400000}")
     private long jwtExpiration;
 
     public String extractUsername(String token) {

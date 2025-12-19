@@ -29,14 +29,12 @@ public class ContractService {
     private final TemplateEngine templateEngine;
 
     public byte[] generateContractPdf(java.util.UUID orderId) {
-        // 1. Получаем данные
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         String customerInfo = getCustomerInfo(order.getCustomerId());
         String collectorInfo = getCollectorInfo(order.getCollectorId());
 
-        // 2. Заполняем контекст (переменные для HTML)
         Context context = new Context();
         context.setVariable("orderId", order.getId().toString());
         context.setVariable("date", order.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE));
@@ -45,10 +43,8 @@ public class ContractService {
         context.setVariable("description", order.getDescription());
         context.setVariable("price", order.getPrice());
 
-        // 3. Рендерим HTML
         String htmlContent = templateEngine.process("contract", context);
 
-        // 4. Конвертируем в PDF
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
             renderer.setDocumentFromString(htmlContent);

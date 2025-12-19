@@ -36,14 +36,12 @@ public class OrderService {
     private final OrderApplicationRepository orderApplicationRepository;
     private final CollectorProfileRepository collectorProfileRepository;
 
-    // 1. Получение заказов
     public List<Order> getOrdersForUser(String email, String search) {
         User user = getUserByEmail(email);
         UserRoleEnum role = user.getRole().getName();
 
         List<Order> orders = new ArrayList<>();
 
-        // 1. Собираем заказы по ролям (как и было)
         if (role == UserRoleEnum.admin) {
             orders = orderRepository.findAll();
         } else if (role == UserRoleEnum.customer) {
@@ -55,10 +53,8 @@ public class OrderService {
             orders.addAll(myWork);
         }
 
-        // 2. Сортировка (новые сверху)
         orders.sort(Comparator.comparing(Order::getCreatedAt).reversed());
 
-        // 3. НОВОЕ: Фильтрация по поисковому запросу (Java Stream)
         if (search != null && !search.isBlank()) {
             String query = search.toLowerCase().trim();
             return orders.stream()
@@ -70,23 +66,19 @@ public class OrderService {
         return orders;
     }
 
-    // --- НОВЫЙ МЕТОД: Откликнуться (Коллектор) ---
     @Transactional
     public void applyForOrder(UUID orderId, String email) {
         User collector = getUserByEmail(email);
 
 
-        // 1. ПРОВЕРКА ПРОФИЛЯ
         CollectorProfile profile = collectorProfileRepository.findById(collector.getId())
                 .orElseThrow(() -> new RuntimeException("Please create your profile first!"));
 
-        // Проверяем важные поля (регион и ставку)
         if (profile.getRegion() == null || profile.getRegion().isBlank() ||
                 profile.getHourlyRate() == null || java.math.BigDecimal.ZERO.compareTo(profile.getHourlyRate()) >= 0) {
             throw new RuntimeException("Profile incomplete! Please fill Region and Rate in Profile.");
         }
 
-        // 2. Стандартные проверки
         Order order = getOrder(orderId);
         if (!"OPEN".equals(order.getStatus())) throw new RuntimeException("Order not available");
 
@@ -100,7 +92,6 @@ public class OrderService {
         orderApplicationRepository.save(application);
     }
 
-    // --- НОВЫЙ МЕТОД: Выбрать исполнителя (Заказчик) ---
     @Transactional
     public void approveCollector(UUID orderId, UUID collectorId, String customerEmail) {
         User customer = getUserByEmail(customerEmail);
@@ -117,10 +108,8 @@ public class OrderService {
         order.setStatus("IN_PROGRESS");
         orderRepository.save(order);
 
-        // Опционально: можно удалить остальные заявки
     }
 
-    // --- НОВЫЙ МЕТОД: Отозвать заявку ---
     @Transactional
     public void withdrawApplication(UUID orderId, String email) {
         User collector = getUserByEmail(email);
@@ -128,11 +117,9 @@ public class OrderService {
         OrderApplication app = orderApplicationRepository.findByOrderIdAndCollectorId(orderId, collector.getId())
                 .orElseThrow(() -> new RuntimeException("Application not found"));
 
-        // Удаляем заявку
         orderApplicationRepository.delete(app);
     }
 
-    // --- НОВЫЙ МЕТОД: Получить список ID заказов, куда я подался ---
     public List<UUID> getMyAppliedOrderIds(String email) {
         User collector = getUserByEmail(email);
         return orderApplicationRepository.findAllByCollectorId(collector.getId())
@@ -149,7 +136,6 @@ public class OrderService {
         orderRepository.deleteById(orderId);
     }
 
-    // --- НОВЫЙ МЕТОД: Получить список откликов (для Заказчика) ---
     public List<ApplicationDto> getApplicationsForOrder(UUID orderId) {
         List<OrderApplication> apps = orderApplicationRepository.findAllByOrderId(orderId);
 
@@ -160,9 +146,8 @@ public class OrderService {
             dto.setEmail(app.getCollector().getEmail());
             dto.setAppliedAt(app.getCreatedAt());
 
-            // Ищем профиль коллектора, чтобы достать рейтинг
             CollectorProfile profile = collectorProfileRepository.findById(app.getCollector().getId())
-                    .orElse(new CollectorProfile()); // Пустой, если нет
+                    .orElse(new CollectorProfile());
 
             dto.setRating(profile.getAverageRating() != null ? profile.getAverageRating() : BigDecimal.ZERO);
             dto.setHourlyRate(profile.getHourlyRate());
@@ -177,8 +162,6 @@ public class OrderService {
     public Order createOrder(String email, String description, BigDecimal price, MultipartFile file) {
         User customer = getUserByEmail(email);
 
-        // ВАЖНО: Ваша процедура create_new_order требует сразу и customer, и collector.
-        // Но для биржи коллектор неизвестен. Поэтому создаем через JPA стандартно.
 
         String filePath = fileStorageService.uploadFile(file);
 
@@ -186,7 +169,7 @@ public class OrderService {
         order.setCustomerId(customer.getId());
         order.setDescription(description);
         order.setPrice(price);
-        order.setStatus("PENDING_MODERATION"); // Ждет админа
+        order.setStatus("PENDING_MODERATION");
 
         Order saved = orderRepository.save(order);
 
@@ -200,7 +183,6 @@ public class OrderService {
         return saved;
     }
 
-    // 3. Модерация (Админ)
     @Transactional
     public void moderateOrder(UUID orderId, boolean approved, String reason) {
         Order order = getOrder(orderId);
@@ -216,7 +198,6 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    // 4. Взять заказ (Коллектор)
     @Transactional
     public void takeOrder(UUID orderId, String email) {
         User collector = getUserByEmail(email);
@@ -229,7 +210,6 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    // 5. Сдать работу (Коллектор)
     @Transactional
     public void submitProof(UUID orderId, String email, String proofText, MultipartFile proofFile) {
         User collector = getUserByEmail(email);
@@ -241,39 +221,25 @@ public class OrderService {
         String path = fileStorageService.uploadFile(proofFile);
         order.setProofDescription(proofText);
         order.setProofFilePath(path);
-        order.setStatus("PENDING_REVIEW"); // Ждет подтверждения выполнения
+        order.setStatus("PENDING_REVIEW");
         orderRepository.save(order);
     }
 
-    // 6. Подтверждение и Оплата (Вызывает PL/pgSQL процедуру)
     @Transactional
     public void approveCompletion(UUID orderId, String email) {
-        // 1. Получаем пользователя и заказ
         User user = getUserByEmail(email);
         Order order = getOrder(orderId);
 
-        // 2. Валидация прав:
-        // Если это Заказчик, он должен быть владельцем заказа.
         if (user.getRole().getName() == UserRoleEnum.customer) {
             if (!order.getCustomerId().equals(user.getId())) {
                 throw new RuntimeException("Access denied. You are not the customer for this order.");
             }
         }
-        // Админ может подтверждать любые заказы.
 
-        // 3. Подготовка к вызову процедуры.
-        // Процедура в SQL жестко требует, чтобы статус УЖЕ был 'completed'.
-        // Поэтому мы меняем его здесь и принудительно отправляем в БД.
-
-        // Важно: в процедуре проверка идет на нижний регистр 'completed'
         order.setStatus("completed");
 
-        // saveAndFlush обязателен! Иначе Hibernate отложит UPDATE,
-        // процедура запустится раньше и упадет с ошибкой "Order status is not completed".
         orderRepository.saveAndFlush(order);
 
-        // 4. Вызов хранимой процедуры для проведения транзакций
-        // Передаем ID заказа и ID заказчика (владельца), так как процедура сверяет их.
         orderRepository.completeOrderAndProcessPayment(order.getId(), order.getCustomerId());
     }
 

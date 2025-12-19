@@ -15,7 +15,6 @@ public class JwtResponse {
         this.role = role;
     }
 
-    // Геттеры обязательны для сериализации в JSON
     public String getToken() {
         return token;
     }

@@ -16,7 +16,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-// Гарантируем, что сюда зайдет только Админ (хотя SecurityConfig тоже защищает)
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
@@ -24,7 +23,6 @@ public class AdminController {
     private final OrderService orderService;
     private final TransactionRepository transactionRepository;
 
-    // --- ПОЛЬЗОВАТЕЛИ ---
 
     @GetMapping("/users")
     public List<User> getAllUsers(@RequestParam(required = false) String search) {
@@ -43,9 +41,6 @@ public class AdminController {
         return ResponseEntity.ok(blocked ? "User blocked" : "User unblocked");
     }
 
-    // --- ЗАКАЗЫ ---
-
-    // Удаление заказа (жесткое)
     @DeleteMapping("/orders/{id}")
     public ResponseEntity<?> deleteOrder(@PathVariable UUID id) {
         orderService.deleteOrder(id);

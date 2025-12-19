@@ -23,5 +23,5 @@ public class RegisterRequest {
     private String phone;
 
     @NotBlank
-    private String role; // Передаем как строку ("CUSTOMER" или "COLLECTOR")
+    private String role;
 }

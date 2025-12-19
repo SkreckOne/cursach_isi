@@ -34,13 +34,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String jwt;
         final String userEmail;
 
-        // 1. Проверяем наличие заголовка
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 2. Извлекаем токен
         jwt = authHeader.substring(7);
         try {
             userEmail = jwtUtils.getUserNameFromJwtToken(jwt);
@@ -50,12 +48,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 3. Если email есть и контекст пуст - авторизуем
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
             if (jwtUtils.validateJwtToken(jwt)) {
-                // Создаем объект аутентификации
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
@@ -63,10 +59,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // ВАЖНО: Устанавливаем контекст
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                // ЛОГ ДЛЯ ОТЛАДКИ (УДАЛИТЬ ПОТОМ)
                 System.out.println("User authenticated: " + userEmail + ", Roles: " + userDetails.getAuthorities());
             }
         }

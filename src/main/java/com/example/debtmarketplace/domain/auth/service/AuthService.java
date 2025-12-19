@@ -32,28 +32,21 @@ public class AuthService {
 
     @Transactional
     public String registerUser(RegisterRequest request) {
-        // 1. Проверка существования Email
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Error: Email is already in use!");
         }
 
-        // 2. Определение роли (нечувствительно к регистру)
         UserRoleEnum roleEnum = Arrays.stream(UserRoleEnum.values())
                 .filter(r -> r.name().equalsIgnoreCase(request.getRole()))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Error: Invalid role. Allowed: customer, collector"));
 
-        // 3. Поиск роли в БД
         Role userRole = roleRepository.findByName(roleEnum)
                 .orElseThrow(() -> new RuntimeException("Error: Role not found in database."));
 
-        // 4. Создание пользователя
-        // ВАЖНО: Мы НЕ вызываем .phone(), так как в таблице users нет этой колонки.
-        // Если вы добавите колонку в БД (ALTER TABLE), раскомментируйте строку.
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                // .phone(request.getPhone())
                 .role(userRole)
                 .build();
 

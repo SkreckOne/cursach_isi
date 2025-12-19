@@ -48,7 +48,6 @@ public class FileStorageService {
                             .object(fileName)
                             .build());
         } catch (Exception e) {
-            // Log error strictly
             System.err.println("Failed to rollback file: " + fileName);
         }
     }

@@ -34,15 +34,12 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String password;
 
-    // --- УБРАЛИ PHONE (нет в БД) ---
-    // Если хотите вернуть, нужно сначала выполнить в БД:
-    // ALTER TABLE users ADD COLUMN phone VARCHAR(255);
+
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    // --- УБРАЛИ isActive и isVerified (нет в БД, используем verificationStatus) ---
 
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", columnDefinition = "verification_status", nullable = false)

@@ -28,23 +28,19 @@ public class ProfileService {
     private final CustomerProfileRepository customerProfileRepository;
     private final WorkMethodRepository workMethodRepository;
 
-    // --- ОБНОВЛЕННЫЙ МЕТОД ПОЛУЧЕНИЯ ПРОФИЛЯ ---
     public Object getMyProfile(String email) {
         User user = getUserByEmail(email);
         UserRoleEnum role = user.getRole().getName();
 
         if (role == UserRoleEnum.collector) {
-            // 1. Получаем профиль из базы (или пустой, если нет)
             CollectorProfile profile = collectorProfileRepository.findById(user.getId())
                     .orElse(new CollectorProfile());
 
-            // 2. Маппим в DTO
             CollectorProfileDto dto = new CollectorProfileDto();
             dto.setDescription(profile.getDescription());
             dto.setHourlyRate(profile.getHourlyRate());
             dto.setRegion(profile.getRegion());
 
-            // 3. Достаем методы работы из User и превращаем в список ID
             if (user.getWorkMethods() != null) {
                 List<java.util.UUID> methodIds = user.getWorkMethods().stream()
                         .map(WorkMethod::getId)
@@ -54,7 +50,6 @@ public class ProfileService {
 
             return dto;
         } else {
-            // Для заказчика возвращаем сущность как есть (или можно тоже сделать DTO)
             return customerProfileRepository.findById(user.getId()).orElse(null);
         }
     }
@@ -63,7 +58,6 @@ public class ProfileService {
     public void updateCollectorProfile(String email, CollectorProfileDto dto) {
         User user = getUserByEmail(email);
 
-        // 1. Обновляем таблицу профиля
         CollectorProfile profile = collectorProfileRepository.findById(user.getId())
                 .orElse(new CollectorProfile());
 
@@ -74,11 +68,9 @@ public class ProfileService {
 
         collectorProfileRepository.save(profile);
 
-        // 2. Обновляем методы работы
         if (dto.getWorkMethodIds() != null) {
             List<WorkMethod> methods = workMethodRepository.findAllById(dto.getWorkMethodIds());
 
-            // Важно: инициализируем сет, если он null (хотя в User он обычно new HashSet<>())
             if (user.getWorkMethods() == null) {
                 user.setWorkMethods(new HashSet<>());
             }
