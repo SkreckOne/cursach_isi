@@ -3,27 +3,22 @@ import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 
 const OrdersPage = () => {
-    // --- STATE ---
     const [orders, setOrders] = useState([]);
 
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Форма создания (Customer)
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
     const [file, setFile] = useState(null);
 
-    // Форма сдачи работы (Collector)
     const [proofText, setProofText] = useState('');
     const [proofFile, setProofFile] = useState(null);
     const [activeOrderId, setActiveOrderId] = useState(null);
     const [appliedOrderIds, setAppliedOrderIds] = useState([]);
 
-    // Просмотр откликов (Customer)
     const [applicants, setApplicants] = useState([]);
     const [selectedOrderId, setSelectedOrderId] = useState(null);
 
-    // Инфо о пользователе
     const navigate = useNavigate();
     const role = localStorage.getItem('role')?.toLowerCase();
     const email = localStorage.getItem('email');
@@ -40,16 +35,13 @@ const OrdersPage = () => {
 
     const [userInfo, setUserInfo] = useState({ balance: 0, role: '', email: '' });
 
-    // --- EFFECTS ---
     useEffect(() => {
         fetchOrders();
-        // Если я коллектор - загружаю свои заявки
-        fetchUserInfo(); // !!! ДОБАВИТЬ ЭТОТ ВЫЗОВ !!!
+        fetchUserInfo();
         if (role === 'collector') {
             fetchAppliedIds();
         }
     }, [role]);
-    // --- API CALLS ---
 
     const handleLogout = () => {
         localStorage.clear();
@@ -77,7 +69,6 @@ const OrdersPage = () => {
             const response = await api.get('/orders', {
                 params: { search: query }
             });
-            // Сортировка: новые сверху
             setOrders(response.data)
         } catch (error) {
             console.error("Error fetching orders", error);
@@ -92,13 +83,11 @@ const OrdersPage = () => {
         fetchOrders(searchQuery);
     };
 
-    // Сброс поиска
     const handleClearSearch = () => {
         setSearchQuery('');
         fetchOrders('');
     };
 
-    // 1. Создание заказа (Customer)
     const handleCreate = async (e) => {
         e.preventDefault();
         const formData = new FormData();
@@ -114,19 +103,15 @@ const OrdersPage = () => {
         } catch (e) { alert("Error creating order: " + (e.response?.data || e.message)); }
     };
 
-    // 2. Откликнуться на заказ (Collector)
     const handleApply = async (id) => {
         try {
             await api.post(`/orders/${id}/apply`);
             alert("Applied successfully! Wait for customer approval.");
 
-            // Обновляем список кнопок (если есть эта функция)
             if (typeof fetchAppliedIds === 'function') fetchAppliedIds();
         } catch (e) {
-            // Бэкенд прислал текст ошибки в e.response.data
             const message = e.response?.data || "Error applying";
 
-            // Если профиль не создан, можно даже предложить перейти
             if (message.includes("create your profile")) {
                 if (window.confirm(message + "\n\nGo to Profile page now?")) {
                     navigate('/profile');
@@ -140,10 +125,9 @@ const OrdersPage = () => {
     const handleDownloadContract = async (id) => {
         try {
             const response = await api.get(`/orders/${id}/contract`, {
-                responseType: 'blob', // ВАЖНО: говорим Axios, что ждем бинарный файл
+                responseType: 'blob',
             });
 
-            // Создаем невидимую ссылку и кликаем по ней для скачивания
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -162,7 +146,7 @@ const OrdersPage = () => {
         try {
             await api.delete(`/orders/${id}/application`);
             alert("Application withdrawn.");
-            fetchAppliedIds(); // Обновляем список, чтобы кнопка сменилась на Apply
+            fetchAppliedIds();
         } catch (e) { alert("Error withdrawing"); }
     };
 
@@ -187,14 +171,13 @@ const OrdersPage = () => {
                 comment: comment
             });
             alert("Review submitted! The collector's rating has been updated.");
-            setReviewOrderId(null); // Закрыть форму
+            setReviewOrderId(null);
             setComment('');
         } catch (e) {
             alert("Error: " + (e.response?.data || e.message));
         }
     };
 
-    // 3. Загрузить отклики (Customer)
     const loadApplicants = async (orderId) => {
         try {
             const res = await api.get(`/orders/${orderId}/applications`);
@@ -203,7 +186,6 @@ const OrdersPage = () => {
         } catch (e) { alert("Error loading applicants"); }
     };
 
-    // 4. Нанять коллектора (Customer)
     const handleHireCollector = async (orderId, collectorId) => {
         if(!window.confirm("Hire this collector?")) return;
         try {
@@ -214,14 +196,12 @@ const OrdersPage = () => {
         } catch (e) { alert("Error hiring collector"); }
     };
 
-    // 5. Открыть форму сдачи (Collector)
     const openProofForm = (id) => {
         setActiveOrderId(id);
         setProofText('');
         setProofFile(null);
     };
 
-    // 6. Отправить отчет (Collector)
     const handleSubmitProof = async (e) => {
         e.preventDefault();
         const formData = new FormData();
@@ -252,7 +232,6 @@ const OrdersPage = () => {
         }
     };
 
-    // 7. Принять работу и оплатить (Customer)
     const handleApproveCompletion = async (id) => {
         if(!window.confirm("Confirm completion and PAY?")) return;
         try {

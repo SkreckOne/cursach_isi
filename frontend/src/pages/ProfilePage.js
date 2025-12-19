@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 const ProfilePage = () => {
     const [profile, setProfile] = useState({});
-    const [allMethods, setAllMethods] = useState([]); // Все доступные методы
+    const [allMethods, setAllMethods] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const role = localStorage.getItem('role')?.toLowerCase();
@@ -16,17 +16,15 @@ const ProfilePage = () => {
         description: '',
         hourlyRate: '',
         region: '',
-        workMethodIds: [] // Выбранные методы
+        workMethodIds: []
     });
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                // Загружаем профиль
                 const profileRes = await api.get('/profiles/me');
                 const p = profileRes.data || {};
 
-                // Загружаем методы работы (если коллектор)
                 let methodsRes = [];
                 if (role === 'collector') {
                     const res = await api.get('/profiles/methods');
@@ -34,15 +32,12 @@ const ProfilePage = () => {
                     setAllMethods(methodsRes);
                 }
 
-                // Мапим данные в форму
                 setFormData({
                     companyName: p.companyName || '',
                     inn: p.inn || '',
                     description: p.description || '',
                     hourlyRate: p.hourlyRate || '',
                     region: p.region || '',
-                    // Если у пользователя уже есть методы, они должны прийти в профиле.
-                    // (Нужно доработать Backend DTO, если хотим предзаполнять. Пока оставим пустым для простоты выбора)
                     workMethodIds: []
                 });
             } catch (e) { console.error(e); } finally { setLoading(false); }

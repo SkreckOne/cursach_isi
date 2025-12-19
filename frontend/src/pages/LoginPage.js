@@ -19,7 +19,6 @@ const LoginPage = () => {
                 throw new Error("Server did not return a token!");
             }
 
-            // Сохраняем данные
             localStorage.setItem('token', token);
             localStorage.setItem('userId', response.data.id);
             localStorage.setItem('role', response.data.role);
@@ -29,7 +28,7 @@ const LoginPage = () => {
         } catch (err) {
             console.error("Login error:", err);
             setError('Invalid email or password');
-            localStorage.clear(); // Чистим, если ошибка
+            localStorage.clear();
         }
     };
 

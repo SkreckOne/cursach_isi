@@ -3,21 +3,20 @@ import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
-    const [activeTab, setActiveTab] = useState('orders'); // orders, users, finance, disputes
+    const [activeTab, setActiveTab] = useState('orders');
     const [users, setUsers] = useState([]);
     const [orders, setOrders] = useState([]);
     const [transactions, setTransactions] = useState([]);
-    const [disputes, setDisputes] = useState([]); // <--- НОВОЕ СОСТОЯНИЕ
+    const [disputes, setDisputes] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
         if (activeTab === 'users') fetchUsers();
         else if (activeTab === 'finance') fetchTransactions();
-        else if (activeTab === 'disputes') fetchDisputes(); // <--- НОВЫЙ ВЫЗОВ
+        else if (activeTab === 'disputes') fetchDisputes();
         else fetchOrders();
     }, [activeTab]);
 
-    // --- API CALLS ---
     const fetchUsers = async () => {
         try {
             const res = await api.get('/admin/users');
@@ -39,15 +38,13 @@ const AdminDashboard = () => {
         } catch (e) { console.error(e); }
     };
 
-    // <--- НОВАЯ ФУНКЦИЯ ЗАГРУЗКИ СПОРОВ --->
     const fetchDisputes = async () => {
         try {
-            const res = await api.get('/disputes'); // <--- ИСПРАВЛЕНО
+            const res = await api.get('/disputes');
             setDisputes(res.data.filter(d => d.status === 'open'));
         } catch (e) { console.error("Error fetching disputes", e); }
     };
 
-    // --- HANDLERS ---
     const handleVerifyUser = async (id) => { /* ... */
         try { await api.put(`/admin/users/${id}/verify`); fetchUsers(); } catch (e) { alert("Error"); }
     };
@@ -68,7 +65,6 @@ const AdminDashboard = () => {
         try { await api.delete(`/admin/orders/${id}`); fetchOrders(); } catch (e) { alert("Error"); }
     };
 
-    // <--- НОВАЯ ФУНКЦИЯ РЕШЕНИЯ СПОРА --->
     const handleResolveDispute = async (id, collectorWins) => {
         const comment = prompt("Add resolution comment (e.g. 'Proof accepted'):");
         try {
@@ -82,7 +78,6 @@ const AdminDashboard = () => {
         }
     };
 
-    // --- RENDER ---
     return (
         <div className="container">
             <header className="header" style={{marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>

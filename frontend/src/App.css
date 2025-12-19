@@ -30,8 +30,8 @@ input, select {
 }
 
 button {
-    width: auto; /* 1. Кнопки теперь занимают место только по тексту */
-    min-width: 100px; /* Минимальная ширина для красоты */
+    width: auto;
+    min-width: 100px;
     padding: 10px 20px;
     background-color: #007bff;
     color: white;
@@ -42,7 +42,6 @@ button {
     transition: background 0.3s;
 }
 
-/* 2. Добавляем специальное правило для форм входа, чтобы там кнопки остались широкими */
 .auth-container button, .form-section button[type="submit"] {
     width: 100%;
 }
